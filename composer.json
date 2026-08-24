@@ -36,10 +36,10 @@
             "./vendor/bin/phpcs --standard=resources/phpcs.xml.dist --cache=.phpcs.cache test/fixtures/Phpcs/BadCode"
         ],
         "ci:phpcsfixer-passes": [
-            "./vendor/bin/php-cs-fixer fix  --dry-run  --config=resources/php-cs-fixer.php.dist  --cache-file=.php-cs-fixer.cache test/fixtures/PhpcsFixer/GoodCode"
+            "./vendor/bin/php-cs-fixer fix --dry-run --config=resources/php-cs-fixer.php.dist --cache-file=.php-cs-fixer.cache test/fixtures/PhpcsFixer/GoodCode"
         ],
         "ci:phpcsfixer-fails": [
-            "./vendor/bin/php-cs-fixer fix  --dry-run  --config=resources/php-cs-fixer.php.dist  --cache-file=.php-cs-fixer.cache test/fixtures/PhpcsFixer/BadCode"
+            "./vendor/bin/php-cs-fixer fix --dry-run --config=resources/php-cs-fixer.php.dist --cache-file=.php-cs-fixer.cache test/fixtures/PhpcsFixer/BadCode"
         ]
     },
     "bin": [
@@ -48,7 +48,7 @@
     "authors": [
         {
             "name": "VMaarsson",
-            "email": "viktor@maarsson.se"
+            "email": "viktor@maarsson.io"
         }
     ],
     "config": {

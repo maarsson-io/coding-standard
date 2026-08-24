@@ -56,11 +56,13 @@ info "Asserting files exist in project root…"
 test -f phpmd.xml || fail "phpmd.xml was not copied to project root"
 test -f phpcs.xml || fail "phpcs.xml was not copied to project root"
 test -f .php-cs-fixer.php || fail ".php-cs-fixer.php was not copied to project root"
+test -f phpstan.neon || fail "phpstan.neon was not copied to project root"
 
 info "Asserting files match package dist versions…"
 cmp -s phpmd.xml ./vendor/maarsson/coding-standard/resources/phpmd.xml.dist || fail "phpmd.xml mismatch error"
 cmp -s phpcs.xml ./vendor/maarsson/coding-standard/resources/phpcs.xml.dist || fail "phpcs.xml mismatch error"
 cmp -s .php-cs-fixer.php ./vendor/maarsson/coding-standard/resources/php-cs-fixer.php.dist || fail "php-cs-fixer.php mismatch error"
+cmp -s phpstan.neon ./vendor/maarsson/coding-standard/resources/phpstan.neon.dist || fail "phpstan.neon mismatch error"
 
 info "Asserting always-overwrite behavior…"
 echo "local change" >> phpmd.xml

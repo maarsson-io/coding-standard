@@ -1,0 +1,26 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    level: 8
+
+    paths:
+        - app/
+        - database/
+        - routes/
+
+    excludePaths:
+        - bootstrap/cache/*
+        - node_modules/*
+        - public/*
+        - resources/views/*
+        - storage/*
+        - tests/*
+        - vendor/*
+
+    checkAuthCallsWhenInRequestScope: true
+    checkModelProperties: true
+    inferPrivatePropertyTypeFromConstructor: true
+    noEnvCallsOutsideOfConfig: true
+    reportUnmatchedIgnoredErrors: true
