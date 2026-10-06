@@ -117,7 +117,7 @@ The sync script copies shared ruleset files from the package into the project ro
 
 Currently applied files:
 - `phpmd.xml`
-- `phpcs.xml`
+- `.phpcs.xml`
 - `.php-cs-fixer.php`
 - `phpstan.neon`
 
@@ -155,11 +155,11 @@ Run the PHPMD check for displaying violations like this:
 
 Run the PHPCS check for displaying violations like this:
 
-`./vendor/bin/phpcs --parallel=4 --standard=phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
+`./vendor/bin/phpcs --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
 
 Or run the PHPCBF (comes with the same package) to actually fix violations like this:
 
-`./vendor/bin/phpcbf --parallel=4 --standard=phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
+`./vendor/bin/phpcbf --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
 
 ### Using PHP-CS-Fixer with the installed ruleset
 
