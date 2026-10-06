@@ -10,7 +10,7 @@ declare(strict_types=1);
  * @var array<string, string>
  */
 const FILES_TO_SYNC = [
-    'resources/phpmd.xml.dist' => 'phpmd.xml',
+    'resources/phpmd.yml.dist' => 'phpmd.yml',
     'resources/phpcs.xml.dist' => '.phpcs.xml',
     'resources/php-cs-fixer.php.dist' => '.php-cs-fixer.php',
     'resources/phpstan.neon.dist' => 'phpstan.neon',

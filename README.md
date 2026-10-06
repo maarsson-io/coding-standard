@@ -116,7 +116,7 @@ Manual execution:
 The sync script copies shared ruleset files from the package into the project root.
 
 Currently applied files:
-- `phpmd.xml`
+- `phpmd.yml`
 - `.phpcs.xml`
 - `.php-cs-fixer.php`
 - `phpstan.neon`
@@ -149,7 +149,7 @@ Note: `*.cache` should be added to `.gitignore`.
 
 Run the PHPMD check for displaying violations like this:
 
-`./vendor/bin/phpmd . ansi phpmd.xml --suffixes=php --cache --cache-file=.phpmd.cache`
+`./vendor/bin/phpmd analyze . --format=ansi --ruleset=phpmd.yml --suffixes=php --cache --cache-file=.phpmd.cache`
 
 ### Using PHPCS with the installed ruleset
 

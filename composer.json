@@ -18,7 +18,7 @@
         "php": "^8.4"
     },
     "require-dev": {
-        "phpmd/phpmd": "^2.15",
+        "phpmd/phpmd": "^3.0",
         "squizlabs/php_codesniffer": "^4.0",
         "slevomat/coding-standard": "^8.31",
         "friendsofphp/php-cs-fixer": "^3.95"
@@ -30,10 +30,10 @@
     },
     "scripts": {
         "ci:phpmd-passes": [
-            "./vendor/bin/phpmd test/fixtures/Phpmd/GoodCode ansi resources/phpmd.xml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
+            "./vendor/bin/phpmd analyze test/fixtures/Phpmd/GoodCode --format=ansi --ruleset=resources/phpmd.yml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
         ],
         "ci:phpmd-fails": [
-            "./vendor/bin/phpmd test/fixtures/Phpmd/BadCode ansi resources/phpmd.xml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
+            "./vendor/bin/phpmd analyze test/fixtures/Phpmd/BadCode --format=ansi --ruleset=resources/phpmd.yml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
         ],
         "ci:phpcs-passes": [
             "./vendor/bin/phpcs --standard=resources/phpcs.xml.dist --cache=.phpcs.cache test/fixtures/Phpcs/GoodCode"
