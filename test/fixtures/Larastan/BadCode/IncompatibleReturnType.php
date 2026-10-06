@@ -12,3 +12,5 @@ final class IncompatibleReturnType
         return 456;
     }
 }
+
+echo (new IncompatibleReturnType())->run();

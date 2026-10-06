@@ -141,6 +141,7 @@ composer require --dev phpmd/phpmd
 composer require --dev squizlabs/php_codesniffer
 composer require --dev friendsofphp/php-cs-fixer
 composer require --dev larastan/larastan
+composer require --dev shipmonk/dead-code-detector:^1.4
 ```
 
 Note: `*.cache` should be added to `.gitignore`.
@@ -171,11 +172,13 @@ Or run the PHP-CS-Fixer to actually fix violations like this:
 
 `./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --cache-file=.php-cs-fixer.cache`
 
-### Using Larastan with the installed ruleset
+### Using PHPStan with Larastan and dead code detection
 
-Run the Larastan check for displaying possible bugs like this:
+Run PHPStan to check for bugs and unused methods, constants, enum cases, and properties:
 
 `./vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=1G --no-progress`
+
+Analyse the complete configured codebase so that dead code detection includes references across files and tests.
 
 ---
 
