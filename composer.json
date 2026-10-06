@@ -20,7 +20,7 @@
     "require-dev": {
         "phpmd/phpmd": "^2.15",
         "squizlabs/php_codesniffer": "^4.0",
-        "slevomat/coding-standard": "^8.26",
+        "slevomat/coding-standard": "^8.31",
         "friendsofphp/php-cs-fixer": "^3.92"
     },
     "autoload": {
