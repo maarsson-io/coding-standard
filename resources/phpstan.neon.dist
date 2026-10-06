@@ -4,23 +4,19 @@ includes:
 
 parameters:
     level: 8
-
+    phpVersion: 80400
     paths:
         - app/
+        - bootstrap/app.php
+        - config/
         - database/
         - routes/
-
-    excludePaths:
-        - bootstrap/cache/*
-        - node_modules/*
-        - public/*
-        - resources/views/*
-        - storage/*
-        - tests/*
-        - vendor/*
-
+        - tests/
     checkAuthCallsWhenInRequestScope: true
+    checkConfigTypes: true
+    checkMissingTranslations: true
+    checkModelMethodVisibility: true
     checkModelProperties: true
     inferPrivatePropertyTypeFromConstructor: true
     noEnvCallsOutsideOfConfig: true
-    reportUnmatchedIgnoredErrors: true
+    parseModelCastsMethod: true

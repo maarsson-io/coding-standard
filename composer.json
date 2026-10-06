@@ -18,6 +18,9 @@
         "php": "^8.4"
     },
     "require-dev": {
+        "larastan/larastan": "^3.10",
+        "laravel/framework": "^13.0",
+        "orchestra/testbench-core": "^11.0",
         "phpmd/phpmd": "^3.0",
         "squizlabs/php_codesniffer": "^4.0",
         "slevomat/coding-standard": "^8.31",
@@ -29,6 +32,12 @@
         }
     },
     "scripts": {
+        "ci:larastan-passes": [
+            "sh test/ci/larastan-fixtures.sh GoodCode"
+        ],
+        "ci:larastan-fails": [
+            "sh test/ci/larastan-fixtures.sh BadCode"
+        ],
         "ci:phpmd-passes": [
             "./vendor/bin/phpmd analyze test/fixtures/Phpmd/GoodCode --format=ansi --ruleset=resources/phpmd.yml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
         ],
