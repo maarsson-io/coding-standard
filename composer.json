@@ -2,11 +2,17 @@
     "name": "maarsson/coding-standard",
     "description": "Centralized custom coding standards applied across my projects",
     "type": "library",
-    "license": "MIT",
     "keywords": [
         "qa",
         "dev",
         "standards"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "VMaarsson",
+            "email": "viktor@maarsson.io"
+        }
     ],
     "require": {
         "php": "^8.4"
@@ -45,15 +51,7 @@
     "bin": [
         "bin/sync-coding-standards.php"
     ],
-    "authors": [
-        {
-            "name": "VMaarsson",
-            "email": "viktor@maarsson.io"
-        }
-    ],
     "config": {
-        "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": false
-        }
+        "sort-packages": true
     }
 }
