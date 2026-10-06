@@ -22,7 +22,9 @@
         "larastan/larastan": "^3.10",
         "laravel/framework": "^13.0",
         "orchestra/testbench-core": "^11.0",
+        "php-parallel-lint/php-parallel-lint": "^1.4",
         "phpmd/phpmd": "^3.0",
+        "phpro/grumphp": "^2.25",
         "shipmonk/dead-code-detector": "^1.4",
         "slevomat/coding-standard": "^8.31",
         "squizlabs/php_codesniffer": "^4.0"
@@ -33,6 +35,9 @@
         }
     },
     "scripts": {
+        "ci:grumphp-consumer": [
+            "@php test/ci/grumphp-consumer.php"
+        ],
         "ci:dead-code-passes": [
             "sh test/ci/phpstan-fixtures.sh GoodCode dead-code"
         ],

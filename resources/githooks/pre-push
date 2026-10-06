@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Run the extended quality checks from the repository root.
+REPO_ROOT="$(git rev-parse --show-toplevel)" || exit 1
+cd -P "$REPO_ROOT" || exit 1
+export GRUMPHP_GIT_WORKING_DIR="$PWD"
+
+exec "$PWD/vendor/bin/grumphp" run --testsuite=git_pre_push --no-interaction

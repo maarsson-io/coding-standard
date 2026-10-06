@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# FIRST DEFEND LINE - BRANCH PROTECTION
+branch="$(git symbolic-ref --short HEAD 2>/dev/null)"
+
+case "$branch" in
+  develop|staging|master)
+    echo "Direct commits to '$branch' are not allowed."
+    echo "Create a feature/* or hotfix/* branch instead."
+    exit 1
+    ;;
+esac
+
+# SECOND DEFEND LINE - GRUMPHP
+# Normalize repository working directory.
+REPO_ROOT="$(git rev-parse --show-toplevel)" || exit 1
+cd -P "$REPO_ROOT" || exit 1
+
+# Fetch the Git diff and format it as command input.
+DIFF=$(git -c diff.mnemonicprefix=false \
+    -c diff.noprefix=false \
+    --no-pager diff \
+    --raw -r -p -m -M \
+    --full-index \
+    --no-color \
+    --staged | cat)
+
+# Grumphp env vars
+export GRUMPHP_GIT_WORKING_DIR="$PWD"
+
+# Run GrumPHP
+printf "%s\n" "${DIFF}" | exec "$PWD/vendor/bin/grumphp" \
+    git:pre-commit \
+    --skip-success-output \
+    --no-interaction

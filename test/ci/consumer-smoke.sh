@@ -58,6 +58,11 @@ test -f .phpcs.xml || fail ".phpcs.xml was not copied to project root"
 test ! -f phpcs.xml || fail "Legacy phpcs.xml should not be created"
 test -f .php-cs-fixer.php || fail ".php-cs-fixer.php was not copied to project root"
 test -f phpstan.neon || fail "phpstan.neon was not copied to project root"
+test -f grumphp.yml || fail "grumphp.yml was not copied to project root"
+for hook in pre-commit commit-msg pre-push; do
+  test -x ".githooks/$hook" || fail "$hook was not installed as executable"
+  cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook mismatch error"
+done
 
 info "Asserting files match package dist versions…"
 cmp -s phpmd.yml ./vendor/maarsson/coding-standard/resources/phpmd.yml.dist || fail "phpmd.yml mismatch error"
@@ -65,11 +70,24 @@ cmp -s .phpcs.xml ./vendor/maarsson/coding-standard/resources/phpcs.xml.dist || 
 cmp -s .php-cs-fixer.php ./vendor/maarsson/coding-standard/resources/php-cs-fixer.php.dist || fail "php-cs-fixer.php mismatch error"
 cmp -s phpstan.neon ./vendor/maarsson/coding-standard/resources/phpstan.neon.dist || fail "phpstan.neon mismatch error"
 
+cmp -s grumphp.yml ./vendor/maarsson/coding-standard/resources/grumphp.yml.dist || fail "grumphp.yml mismatch error"
+
+info "Asserting Git hook activation…"
+git init -q
+git config core.hooksPath .old-hooks
+./vendor/bin/sync-coding-standards.php
+test "$(git config --local core.hooksPath)" = .githooks || fail "Git hooks were not activated"
+
 info "Asserting always-overwrite behavior…"
 echo "local change" >> phpmd.yml
 echo "local change" >> .phpcs.xml
 echo "local change" >> .php-cs-fixer.php
 echo "local change" >> phpstan.neon
+echo "local change" >> grumphp.yml
+for hook in pre-commit commit-msg pre-push; do
+  echo "local change" >> ".githooks/$hook"
+  chmod -x ".githooks/$hook"
+done
 ./vendor/bin/sync-coding-standards.php
 cmp -s phpmd.yml ./vendor/maarsson/coding-standard/resources/phpmd.yml.dist || fail "phpmd.yml overwrite error"
 
@@ -78,5 +96,11 @@ cmp -s .phpcs.xml ./vendor/maarsson/coding-standard/resources/phpcs.xml.dist || 
 cmp -s .php-cs-fixer.php ./vendor/maarsson/coding-standard/resources/php-cs-fixer.php.dist || fail ".php-cs-fixer.php overwrite error"
 
 cmp -s phpstan.neon ./vendor/maarsson/coding-standard/resources/phpstan.neon.dist || fail "phpstan.neon overwrite error"
+
+cmp -s grumphp.yml ./vendor/maarsson/coding-standard/resources/grumphp.yml.dist || fail "grumphp.yml overwrite error"
+for hook in pre-commit commit-msg pre-push; do
+  test -x ".githooks/$hook" || fail "$hook permissions were not restored"
+  cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook overwrite error"
+done
 
 ok "Consumer smoke test passed."

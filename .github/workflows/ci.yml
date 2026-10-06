@@ -24,18 +24,18 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-plugins
 
       - name: Validate PHPMD ruleset file exists
         run: test -f resources/phpmd.yml.dist
 
       - name: PHPMD should pass for GoodCode
-        run: composer ci:phpmd-passes
+        run: composer --no-plugins ci:phpmd-passes
 
       - name: PHPMD should fail for BadCode (expected)
         run: |
           set +e
-          composer ci:phpmd-fails
+          composer --no-plugins ci:phpmd-fails
           exit_code=$?
           set -e
           if [ $exit_code -eq 0 ]; then
@@ -62,18 +62,18 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-plugins
 
       - name: Validate PHPCS ruleset file exists
         run: test -f resources/phpcs.xml.dist
 
       - name: PHPCS should pass for GoodCode
-        run: composer ci:phpcs-passes
+        run: composer --no-plugins ci:phpcs-passes
 
       - name: PHPCS should fail for BadCode (expected)
         run: |
           set +e
-          composer ci:phpcs-fails
+          composer --no-plugins ci:phpcs-fails
           exit_code=$?
           set -e
           if [ $exit_code -eq 0 ]; then
@@ -100,18 +100,18 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-plugins
 
       - name: Validate PHP-CS-FIXER ruleset file exists
         run: test -f resources/php-cs-fixer.php.dist
 
       - name: PHP-CS-FIXER should pass for GoodCode
-        run: composer ci:phpcsfixer-passes
+        run: composer --no-plugins ci:phpcsfixer-passes
 
       - name: PHP-CS-FIXER should fail for BadCode (expected)
         run: |
           set +e
-          composer ci:phpcsfixer-fails
+          composer --no-plugins ci:phpcsfixer-fails
           exit_code=$?
           set -e
           if [ $exit_code -eq 0 ]; then
@@ -138,18 +138,18 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-plugins
 
       - name: Validate LARASTAN ruleset file exists
         run: test -f resources/phpstan.neon.dist
 
       - name: Larastan should pass for GoodCode
-        run: composer ci:larastan-passes
+        run: composer --no-plugins ci:larastan-passes
 
       - name: Larastan should fail for BadCode (expected)
         run: |
           set +e
-          composer ci:larastan-fails
+          composer --no-plugins ci:larastan-fails
           exit_code=$?
           set -e
           if [ $exit_code -ne 1 ]; then
@@ -176,21 +176,45 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-plugins
 
       - name: Dead code detector should pass for GoodCode
-        run: composer ci:dead-code-passes
+        run: composer --no-plugins ci:dead-code-passes
 
       - name: Dead code detector should fail for BadCode (expected)
         run: |
           set +e
-          composer ci:dead-code-fails
+          composer --no-plugins ci:dead-code-fails
           exit_code=$?
           set -e
           if [ $exit_code -ne 1 ]; then
             echo "Expected dead code violations (exit 1), got exit $exit_code."
             exit 1
           fi
+
+  grumphp:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.5']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-plugins
+
+      - name: Verify GrumPHP consumer hooks
+        run: composer --no-plugins ci:grumphp-consumer
 
   consumer-smoke:
     name: Consumer smoke test
@@ -207,7 +231,7 @@ jobs:
           tools: composer
 
       - name: Install repo dependencies (optional)
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-plugins
 
       - name: Prepare path repo for consumer test
         run: |

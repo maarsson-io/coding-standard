@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# Normalize repository working directory.
+REPO_ROOT="$(git rev-parse --show-toplevel)" || exit 1
+cd -P "$REPO_ROOT" || exit 1
+
+# Collect Git metadata for commit message validation.
+GIT_USER="$(git config user.name)"
+GIT_EMAIL="$(git config user.email)"
+COMMIT_MSG_FILE="$1"
+
+# Fetch the staged Git diff and pass it to GrumPHP.
+DIFF=$(git -c diff.mnemonicprefix=false \
+    -c diff.noprefix=false \
+    --no-pager diff \
+    --raw -r -p -m -M \
+    --full-index \
+    --no-color \
+    --staged | cat)
+
+# Required by GrumPHP to resolve the repository root correctly.
+export GRUMPHP_GIT_WORKING_DIR="$PWD"
+
+# Run GrumPHP.
+printf "%s\n" "${DIFF}" | exec "$PWD/vendor/bin/grumphp" \
+    git:commit-msg \
+    "--git-user=$GIT_USER" \
+    "--git-email=$GIT_EMAIL" \
+    "$COMMIT_MSG_FILE" \
+    --no-interaction
