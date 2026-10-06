@@ -68,9 +68,12 @@ cmp -s phpstan.neon ./vendor/maarsson/coding-standard/resources/phpstan.neon.dis
 info "Asserting always-overwrite behavior…"
 echo "local change" >> phpmd.xml
 echo "local change" >> .phpcs.xml
+echo "local change" >> .php-cs-fixer.php
 ./vendor/bin/sync-coding-standards.php
 cmp -s phpmd.xml ./vendor/maarsson/coding-standard/resources/phpmd.xml.dist || fail "phpmd.xml overwrite error"
 
 cmp -s .phpcs.xml ./vendor/maarsson/coding-standard/resources/phpcs.xml.dist || fail ".phpcs.xml overwrite error"
+
+cmp -s .php-cs-fixer.php ./vendor/maarsson/coding-standard/resources/php-cs-fixer.php.dist || fail ".php-cs-fixer.php overwrite error"
 
 ok "Consumer smoke test passed."
