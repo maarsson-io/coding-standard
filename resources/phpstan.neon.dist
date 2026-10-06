@@ -1,26 +1,31 @@
 includes:
     - vendor/larastan/larastan/extension.neon
     - vendor/nesbot/carbon/extension.neon
+    - vendor/shipmonk/dead-code-detector/rules.neon
 
 parameters:
     level: 8
-
+    phpVersion: 80400
     paths:
         - app/
+        - bootstrap/app.php
+        - config/
         - database/
         - routes/
-
-    excludePaths:
-        - bootstrap/cache/*
-        - node_modules/*
-        - public/*
-        - resources/views/*
-        - storage/*
-        - tests/*
-        - vendor/*
-
+        - tests/
     checkAuthCallsWhenInRequestScope: true
+    checkConfigTypes: true
+    checkMissingTranslations: true
+    checkModelMethodVisibility: true
     checkModelProperties: true
     inferPrivatePropertyTypeFromConstructor: true
     noEnvCallsOutsideOfConfig: true
-    reportUnmatchedIgnoredErrors: true
+    parseModelCastsMethod: true
+    shipmonkDeadCode:
+        detect:
+            deadMethods: true
+            deadConstants: true
+            deadEnumCases: true
+            deadProperties:
+                neverRead: true
+                neverWritten: true

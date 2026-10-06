@@ -28,6 +28,7 @@ Currently supported:
 - [PHP CodeSniffer (PHPCS)](https://github.com/PHPCSStandards/PHP_CodeSniffer/) - detect coding standard violations
 - [PHP CS Fixer](https://cs.symfony.com/) - automatically enforce modern code style
 - [Larastan](https://github.com/larastan/larastan) - catches both obvious & tricky bugs
+- [GrumPHP](https://github.com/phpro/grumphp) - runs quality checks through Git hooks
 
 ---
 
@@ -116,16 +117,22 @@ Manual execution:
 The sync script copies shared ruleset files from the package into the project root.
 
 Currently applied files:
-- `phpmd.xml`
-- `phpcs.xml`
+- `phpmd.yml`
+- `.phpcs.xml`
 - `.php-cs-fixer.php`
 - `phpstan.neon`
+- `grumphp.yml`
+- `.githooks/pre-commit`
+- `.githooks/commit-msg`
+- `.githooks/pre-push`
+
+When run from a Git repository root, the sync script makes the hooks executable and sets the local `core.hooksPath` to `.githooks`. Linked worktrees are supported. Without a Git repository, the files are still copied and activation is skipped.
 
 ### Overwrite behavior
 
 The sync process uses an always overwrite strategy:
 
-- If rulesets already exist in the project root, they will be replaced
+- Existing shared rulesets, `grumphp.yml`, and the three managed hook files are replaced
 - This guarantees all projects use the exact same ruleset
 
 This behavior is intentional and ensures consistency across projects. If you need to customize rules per project, fork this repository or manage overrides outside of this package.
@@ -141,25 +148,45 @@ composer require --dev phpmd/phpmd
 composer require --dev squizlabs/php_codesniffer
 composer require --dev friendsofphp/php-cs-fixer
 composer require --dev larastan/larastan
+composer require --dev shipmonk/dead-code-detector:^1.4
+composer require --dev php-parallel-lint/php-parallel-lint:^1.4
+composer config allow-plugins.phpro/grumphp false
+composer require --dev phpro/grumphp:^2.25
 ```
 
 Note: `*.cache` should be added to `.gitignore`.
+
+### Using GrumPHP and Git hooks
+
+Set `config.allow-plugins.phpro/grumphp` to `false` in the consumer's `composer.json` before installing the toolchain. This package's sync script installs and activates the shared hooks, so GrumPHP's automatic hook installation is disabled.
+
+| Hook | Checks |
+| --- | --- |
+| `pre-commit` | PHP lint and version, Composer validation, JSON/XML/YAML, PHPCS, PHP-CS-Fixer, debug statements, branch name |
+| `commit-msg` | Conventional Commit format |
+| `pre-push` | PHPStan with Larastan and dead code detection, PHPMD, PHPUnit, Composer autoload validation |
+
+The hooks block the operation when a check fails and do not apply automatic fixes. Direct commits to `develop`, `staging`, and `master` are rejected; the branch task also rejects `staging/*`.
+
+The consumer project must provide PHPUnit and `phpunit.xml`. Run the pre-push checks manually with:
+
+`./vendor/bin/grumphp run --testsuite=git_pre_push`
 
 ### Using PHPMD with the installed ruleset
 
 Run the PHPMD check for displaying violations like this:
 
-`./vendor/bin/phpmd . ansi phpmd.xml --suffixes=php --cache --cache-file=.phpmd.cache`
+`./vendor/bin/phpmd analyze . --format=ansi --ruleset=phpmd.yml --suffixes=php --cache --cache-file=.phpmd.cache`
 
 ### Using PHPCS with the installed ruleset
 
 Run the PHPCS check for displaying violations like this:
 
-`./vendor/bin/phpcs --parallel=4 --standard=phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
+`./vendor/bin/phpcs --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
 
 Or run the PHPCBF (comes with the same package) to actually fix violations like this:
 
-`./vendor/bin/phpcbf --parallel=4 --standard=phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
+`./vendor/bin/phpcbf --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
 
 ### Using PHP-CS-Fixer with the installed ruleset
 
@@ -171,11 +198,13 @@ Or run the PHP-CS-Fixer to actually fix violations like this:
 
 `./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --cache-file=.php-cs-fixer.cache`
 
-### Using Larastan with the installed ruleset
+### Using PHPStan with Larastan and dead code detection
 
-Run the Larastan check for displaying possible bugs like this:
+Run PHPStan to check for bugs and unused methods, constants, enum cases, and properties:
 
 `./vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=1G --no-progress`
+
+Analyse the complete configured codebase so that dead code detection includes references across files and tests.
 
 ---
 

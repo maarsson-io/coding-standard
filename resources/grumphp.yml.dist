@@ -1,0 +1,222 @@
+grumphp:
+    # Stop on first failure for faster feedback
+    stop_on_failure: false
+
+    # Hide circumvention tip to prevent --no-verify abuse
+    hide_circumvention_tip: true
+
+    # Ignore unstaged changes (only check staged files)
+    ignore_unstaged_changes: false
+
+    # Process timeout (in seconds)
+    process_timeout: 120
+
+    hooks_dir: .githooks
+    hooks_preset: local
+    parallel:
+        enabled: true
+        max_workers: 10
+    fixer:
+        enabled: false
+        fix_by_default: false
+
+    # Tasks to run on git commit
+    tasks:
+        # PHP Lint - Check for syntax errors
+        # Super fast, can always be run on every commit
+        phplint:
+            php_executable: php
+            exclude:
+                - vendor
+                - storage
+                - bootstrap/cache
+                - node_modules
+                - public
+                - _ide_helper.php
+                - _ide_helper_models.php
+            jobs: 8
+            short_open_tag: false
+            ignore_patterns: []
+            triggered_by: ['php']
+
+        # PhpVersion - Check if your current php version is still supported
+        phpversion:
+            project: '8.4'
+
+        # PHPStan - Heavy static analysis
+        phpstan:
+            autoload_file: ~
+            configuration: phpstan.neon
+            level: null # Use level from phpstan.neon
+            force_patterns: []
+            ignore_patterns: []
+            triggered_by: ['php']
+            memory_limit: '-1'
+            use_grumphp_paths: false # true: (only checks changed files) faster
+
+        # PHP_CodeSniffer - Coding Standards Check
+        phpcs:
+            standard: .phpcs.xml
+            report: full
+            parallel: 8
+            whitelist_patterns: []
+            ignore_patterns: []
+            exclude: []
+            triggered_by: ['php']
+
+        # PHP-CS-Fixer - Code Style Fixer (but checking only in dry-run mode)
+        phpcsfixer:
+            config: .php-cs-fixer.php
+            rules: []
+            using_cache: true
+            cache_file: .php-cs-fixer.cache
+            allow_risky: true
+            triggered_by: ['php']
+            verbose: false
+            diff: true
+
+        # PHPMD - Mess Detector
+        phpmd:
+            ruleset: ['phpmd.yml']
+            triggered_by: ['php']
+            exclude: []
+            report_format: text
+
+        # Git Branch Name - Ensure correct branch names
+        git_branch_name:
+            blacklist:
+                - '/^develop$/'
+                - '/^staging(\/.*)?$/'
+                - '/^master$/'
+            allow_detached_head: true
+
+        # Git Blacklist - Prevent debug statements
+        git_blacklist:
+            keywords:
+                # Laravel/PHP Debug
+                - 'dd('
+                - 'dump('
+                - 'var_dump('
+                - 'print_r('
+                - 'var_export('
+                - 'die('
+                - 'exit('
+
+                # JavaScript/Vue Debug
+                - 'console.log('
+                - 'console.error('
+                - 'console.warn('
+                - 'console.debug('
+                - 'debugger;'
+                - 'alert('
+
+                # Development markers
+                - 'FIXME:'
+                - 'HACK:'
+                - 'XXX:'
+
+                # Merge conflict markers
+                - '<<<<<<< '
+                - '======='
+                - '>>>>>>> '
+
+            whitelist_patterns: []
+
+            triggered_by:
+              - php
+              - blade.php
+              - js
+              - vue
+              - ts
+              - jsx
+              - tsx
+              - mjs
+              - cjs
+            regexp_type: G
+            match_word: false
+
+        # Commit Message Format
+        git_commit_message:
+            allow_empty_message: false
+            enforce_capitalized_subject: false
+            enforce_no_subject_punctuations: false
+            enforce_no_subject_trailing_period: true
+            enforce_single_lined_subject: true
+            max_subject_width: 72
+            max_body_width: 72
+            case_insensitive: false
+            multiline: true
+            additional_modifiers: ''
+            type_scope_conventions:
+                types:
+                    - feat # new feature
+                    - fix # bug fix
+                    - docs # documentation only
+                    - style # formatting code (no logic changes)
+                    - refactor # code change that doesn’t fix a bug or add a feature
+                    - test # adding or fixing tests
+                    - chore # tooling, dependency updates
+                    - build # building assets
+                    - ci # CI/CD configuration
+                    - perf # performance updates (no logic changes)
+                    - revert # reverting a commit
+                scopes: []
+            matchers:
+                - '/^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\([a-z0-9\-]+\))?(!)?: .+$/'
+
+        composer:
+            no_check_publish: true
+            strict: true
+
+        composer_validate_autoload:
+            strict_ambiguous: true
+
+        jsonlint:
+            detect_key_conflicts: true
+
+        xmllint:
+            ignore_patterns: []
+
+        yamllint:
+            whitelist_patterns: []
+            ignore_patterns: []
+
+        phpunit:
+            config_file: phpunit.xml
+            testsuite: ~
+            group: []
+            always_execute: false # true: run the whole test suite, even if no PHP files were changed.
+
+        pest:
+            config_file: phpunit.xml
+            testsuite: ~
+            group: []
+            always_execute: false # true: run the whole test suite, even if no PHP files were changed.
+
+    # Configure test suite to run on an event
+    testsuites:
+        # Fast checks on every commit
+        git_pre_commit:
+            tasks:
+                - phplint
+                - phpversion
+                - composer
+                - jsonlint
+                - xmllint
+                - yamllint
+                - phpcs
+                - phpcsfixer
+                - git_blacklist
+                - git_branch_name
+
+        # Thorough checks before push
+        git_pre_push:
+            tasks:
+                - phpstan
+                - phpmd
+                - phpunit
+                - composer_validate_autoload
+
+        git_commit_msg:
+            tasks:
+                - git_commit_message

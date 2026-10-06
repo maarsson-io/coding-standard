@@ -2,20 +2,32 @@
     "name": "maarsson/coding-standard",
     "description": "Centralized custom coding standards applied across my projects",
     "type": "library",
-    "license": "MIT",
     "keywords": [
         "qa",
         "dev",
         "standards"
     ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "VMaarsson",
+            "email": "viktor@maarsson.io"
+        }
+    ],
     "require": {
         "php": "^8.4"
     },
     "require-dev": {
-        "phpmd/phpmd": "^2.15",
-        "squizlabs/php_codesniffer": "^4.0",
-        "slevomat/coding-standard": "^8.26",
-        "friendsofphp/php-cs-fixer": "^3.92"
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "larastan/larastan": "^3.10",
+        "laravel/framework": "^13.0",
+        "orchestra/testbench-core": "^11.0",
+        "php-parallel-lint/php-parallel-lint": "^1.4",
+        "phpmd/phpmd": "^3.0",
+        "phpro/grumphp": "^2.25",
+        "shipmonk/dead-code-detector": "^1.4",
+        "slevomat/coding-standard": "^8.31",
+        "squizlabs/php_codesniffer": "^4.0"
     },
     "autoload": {
         "psr-4": {
@@ -23,11 +35,26 @@
         }
     },
     "scripts": {
+        "ci:grumphp-consumer": [
+            "@php test/ci/grumphp-consumer.php"
+        ],
+        "ci:dead-code-passes": [
+            "sh test/ci/phpstan-fixtures.sh GoodCode dead-code"
+        ],
+        "ci:dead-code-fails": [
+            "sh test/ci/phpstan-fixtures.sh BadCode dead-code"
+        ],
+        "ci:larastan-passes": [
+            "sh test/ci/phpstan-fixtures.sh GoodCode"
+        ],
+        "ci:larastan-fails": [
+            "sh test/ci/phpstan-fixtures.sh BadCode"
+        ],
         "ci:phpmd-passes": [
-            "./vendor/bin/phpmd test/fixtures/Phpmd/GoodCode ansi resources/phpmd.xml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
+            "./vendor/bin/phpmd analyze test/fixtures/Phpmd/GoodCode --format=ansi --ruleset=resources/phpmd.yml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
         ],
         "ci:phpmd-fails": [
-            "./vendor/bin/phpmd test/fixtures/Phpmd/BadCode ansi resources/phpmd.xml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
+            "./vendor/bin/phpmd analyze test/fixtures/Phpmd/BadCode --format=ansi --ruleset=resources/phpmd.yml.dist --suffixes=php --cache --cache-file=.phpmd.cache"
         ],
         "ci:phpcs-passes": [
             "./vendor/bin/phpcs --standard=resources/phpcs.xml.dist --cache=.phpcs.cache test/fixtures/Phpcs/GoodCode"
@@ -45,15 +72,7 @@
     "bin": [
         "bin/sync-coding-standards.php"
     ],
-    "authors": [
-        {
-            "name": "VMaarsson",
-            "email": "viktor@maarsson.io"
-        }
-    ],
     "config": {
-        "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": false
-        }
+        "sort-packages": true
     }
 }

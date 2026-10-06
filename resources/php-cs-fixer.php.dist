@@ -1,57 +1,35 @@
 <?php
+
 /*
  * This document has been generated with
- * https://mlocati.github.io/php-cs-fixer-configurator/#version:3.92.5|configurator
+ * https://mlocati.github.io/php-cs-fixer-configurator/#version:3.95|configurator
  * you can change this configuration by importing this file.
  */
 
-declare(strict_types=1);
-
-use PhpCsFixer\Config;
-use PhpCsFixer\Finder;
-
-$config = new Config();
+$config = new PhpCsFixer\Config();
 
 return $config
     ->setRiskyAllowed(true)
     ->setRules([
         '@PSR12' => true,
-        'align_multiline_comment' => ['comment_type' => 'phpdocs_only'],
         'array_indentation' => true,
         'array_syntax' => ['syntax' => 'short'],
-        'attribute_empty_parentheses' => true,
         'backtick_to_shell_exec' => true,
         'binary_operator_spaces' => true,
-        'blank_line_after_opening_tag' => true,
         'blank_line_before_statement' => true,
-        'blank_lines_before_namespace' => true,
         'cast_spaces' => true,
-        'class_attributes_separation' => [
-            'elements' => [
-                'const' => 'only_if_meta',
-                'method' => 'one',
-                'property' => 'one',
-                'trait_import' => 'none',
-                'case' => 'none'
-            ]
-        ],
-        'clean_namespace' => true,
+        'class_attributes_separation' => true,
         'combine_consecutive_issets' => true,
         'combine_consecutive_unsets' => true,
         'combine_nested_dirname' => true,
         'concat_space' => ['spacing' => 'one'],
-        'declare_equal_normalize' => ['space' => 'single'],
-        'declare_parentheses' => true,
         'dir_constant' => true,
         'echo_tag_syntax' => ['format' => 'long'],
+        'type_declaration_spaces' => true,
         'global_namespace_import' => ['import_classes' => true],
         'heredoc_to_nowdoc' => true,
         'include' => true,
         'increment_style' => ['style' => 'post'],
-        'is_null' => true,
-        'linebreak_after_opening_tag' => true,
-        'lowercase_cast' => true,
-        'lowercase_static_reference' => true,
         'magic_constant_casing' => true,
         'magic_method_casing' => true,
         'method_chaining_indentation' => true,
@@ -59,13 +37,9 @@ return $config
         'multiline_whitespace_before_semicolons' => true,
         'native_function_casing' => true,
         'native_type_declaration_casing' => true,
-        'new_with_parentheses' => ['anonymous_class' => false],
-        'no_blank_lines_after_class_opening' => true,
         'no_blank_lines_after_phpdoc' => true,
-        'no_empty_comment' => true,
         'no_empty_phpdoc' => true,
         'no_empty_statement' => true,
-        'no_leading_import_slash' => true,
         'no_leading_namespace_whitespace' => true,
         'no_multiline_whitespace_around_double_arrow' => true,
         'no_null_property_initialization' => true,
@@ -74,63 +48,64 @@ return $config
         'no_spaces_around_offset' => true,
         'no_superfluous_elseif' => true,
         'no_trailing_comma_in_singleline' => true,
-        'no_unneeded_braces' => true,
         'no_unneeded_control_parentheses' => true,
+        'no_unneeded_braces' => true,
         'no_unused_imports' => true,
         'no_useless_else' => true,
         'no_useless_return' => true,
         'no_whitespace_before_comma_in_array' => true,
-        'no_whitespace_in_blank_line' => true,
-        'normalize_index_brace' => true,
         'not_operator_with_successor_space' => true,
         'nullable_type_declaration_for_default_null_value' => true,
         'object_operator_without_whitespace' => true,
         'ordered_class_elements' => true,
-        'ordered_imports' => true,
+        'ordered_imports' => [
+            'imports_order' => ['class', 'function', 'const'],
+            'sort_algorithm' => 'alpha',
+        ],
         'phpdoc_add_missing_param_annotation' => true,
         'phpdoc_align' => ['align' => 'left'],
         'phpdoc_annotation_without_dot' => true,
+        'phpdoc_array_type' => true,
         'phpdoc_indent' => true,
         'phpdoc_inline_tag_normalizer' => true,
         'phpdoc_line_span' => true,
+        'phpdoc_list_type' => true,
         'phpdoc_no_package' => true,
         'phpdoc_no_useless_inheritdoc' => true,
         'phpdoc_order' => true,
+        'phpdoc_param_order' => true,
         'phpdoc_return_self_reference' => true,
         'phpdoc_scalar' => true,
         'phpdoc_separation' => true,
         'phpdoc_single_line_var_spacing' => true,
         'phpdoc_summary' => true,
         'phpdoc_trim' => true,
+        'phpdoc_trim_consecutive_blank_line_separation' => true,
         'phpdoc_types' => true,
+        'phpdoc_no_duplicate_types' => true,
         'phpdoc_types_order' => true,
         'phpdoc_var_without_name' => true,
-        'psr_autoloading' => true,
         'self_accessor' => true,
-        'short_scalar_cast' => true,
         'simplified_null_return' => true,
+        'blank_lines_before_namespace' => true,
         'single_line_comment_style' => true,
         'single_quote' => true,
         'space_after_semicolon' => true,
         'standardize_not_equals' => true,
-        'ternary_operator_spaces' => true,
         'ternary_to_null_coalescing' => true,
         'trailing_comma_in_multiline' => ['elements' => ['arrays']],
         'trim_array_spaces' => true,
-        'type_declaration_spaces' => true,
-        'unary_operator_spaces' => true,
         'whitespace_after_comma_in_array' => true,
     ])
     ->setFinder(
-        Finder::create()
-            ->in(__DIR__)
-            ->name('*.php')
-            ->notName('_ide_helper*.php')
-            ->notPath('server.php')
-            ->exclude('bootstrap/cache')
+        PhpCsFixer\Finder::create()
             ->exclude('node_modules')
-            ->exclude('public')
-            ->exclude('resources/views')
-            ->exclude('storage')
             ->exclude('vendor')
+            ->exclude('bootstrap/cache')
+            ->exclude('storage')
+            ->notName('_ide_helper*.php')
+            ->notName('*.blade.php')
+            ->notPath('server.php')
+            ->notPath('public/index.php')
+            ->in(__DIR__)
     );
