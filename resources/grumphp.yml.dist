@@ -75,6 +75,12 @@ grumphp:
             verbose: false
             diff: true
 
+        # ESLint - JavaScript, TypeScript and Vue checks
+        eslint:
+            bin: node_modules/.bin/eslint
+            config: eslint.config.mjs
+            triggered_by: ['js', 'ts', 'vue']
+
         # PHPMD - Mess Detector
         phpmd:
             ruleset: ['phpmd.yml']
@@ -206,6 +212,7 @@ grumphp:
                 - yamllint
                 - phpcs
                 - phpcsfixer
+                - eslint
                 - git_blacklist
                 - git_branch_name
 

@@ -67,6 +67,9 @@
         ],
         "ci:phpcsfixer-fails": [
             "./vendor/bin/php-cs-fixer fix --dry-run --config=resources/php-cs-fixer.php.dist --cache-file=.php-cs-fixer.cache test/fixtures/PhpcsFixer/BadCode"
+        ],
+        "ci:frontend-consumer": [
+            "@php test/ci/frontend-consumer.php"
         ]
     },
     "bin": [

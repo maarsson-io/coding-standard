@@ -1,0 +1,109 @@
+import { defineConfig } from 'eslint/config';
+import globals from 'globals';
+import js from '@eslint/js';
+import vue from 'eslint-plugin-vue';
+import tseslint from 'typescript-eslint';
+import stylistic from '@stylistic/eslint-plugin';
+
+export default defineConfig([
+  {
+    ignores: [
+      '**/vendor/**',
+      '**/node_modules/**',
+      'public/build/**',
+    ],
+  },
+  {
+    files: ['**/*.{js,ts,vue}'],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
+    files: ['**/*.js'],
+    extends: [js.configs.recommended],
+  },
+  {
+    files: ['**/*.{ts,vue}'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommended,
+      vue.configs['flat/recommended'],
+    ],
+    languageOptions: {
+      parserOptions: {
+        parser: tseslint.parser,
+      },
+    },
+  },
+    {
+    files: ['**/*.{js,ts,vue}'],
+    extends: [stylistic.configs.recommended],
+    },
+  {
+    files: ['**/*.{js,ts,vue}'],
+    rules: {
+      // ESLINT
+      'no-duplicate-imports': ['error'],
+      'no-template-curly-in-string': ['error'],
+      'no-unreachable-loop': ['error'],
+      // ESLINT SUGGESTIONS
+      'arrow-body-style': ['error', 'as-needed'],
+      'complexity': ['warn', 5],
+      'curly': ['error', 'all'],
+      'default-case': ['error'],
+      'eqeqeq': ['error', 'always'],
+      'logical-assignment-operators': ['error', 'always'],
+      'max-classes-per-file': ['error', 1],
+      'max-depth': ['warn', 3],
+      'max-lines-per-function': ['warn', {
+        max: 100,
+        skipBlankLines: true,
+        skipComments: true,
+      }],
+      'max-nested-callbacks': ['warn', 2],
+      'max-params': ['warn', 3],
+      'no-alert': ['error'],
+      'no-else-return': ['error'],
+      'no-empty-function': ['error'],
+      'no-invalid-this': ['error'],
+      'no-lone-blocks': ['error'],
+      'no-nested-ternary': ['error'],
+      'no-param-reassign': ['error'],
+      'no-var': ['error'],
+      'prefer-const': ['error'],
+      'require-await': ['error'],
+      'sort-imports': ['warn', {
+        allowSeparatedGroups: true,
+        memberSyntaxSortOrder: ['all', 'single', 'multiple', 'none'],
+      }],
+      'yoda': ['error', 'never'],
+      // STYLISTIC
+      '@stylistic/multiline-comment-style': ['warn', 'bare-block'],
+      '@stylistic/indent': ['error', 2, {
+        SwitchCase: 1,
+      }],
+      '@stylistic/lines-between-class-members': ['error', 'always', {
+        exceptAfterSingleLine: true,
+      }],
+    },
+  },
+  {
+    files: ['**/*.js'],
+    rules: {
+      // ESLINT SUGGESTIONS
+      'consistent-return': ['error'],
+    },
+  },
+  {
+    files: ['**/*.vue'],
+    rules: {
+      // VUE
+      'vue/multi-word-component-names': ['off'],
+      'vue/attribute-hyphenation': ['error', 'always'],
+      'vue/eqeqeq': ['error', 'always'],
+      'vue/html-indent': ['error'],
+      'vue/no-v-html': ['error'],
+    },
+  },
+]);

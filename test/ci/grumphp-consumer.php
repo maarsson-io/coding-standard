@@ -16,6 +16,7 @@ $environment = [
     'GRUMPHP_TEST_LOG' => $consumer . '/calls.log',
     'GRUMPHP_TEST_FAIL_PHPSTAN' => '0',
     'GRUMPHP_TEST_FAIL_PHPUNIT' => '0',
+    'GRUMPHP_TEST_FAIL_ESLINT' => '0',
 ];
 
 /**
@@ -64,9 +65,11 @@ try {
         $filesystem->symlink($repo . '/vendor/bin/' . $binary, $binaries . '/' . $binary);
     }
 
-    // Verify push orchestration separately from application analysis and tests.
-    foreach (['phpstan', 'phpunit'] as $binary) {
-        $executable = $binaries . '/' . $binary;
+    // Verify hook orchestration separately from frontend checks, application analysis and tests.
+    foreach (['phpstan', 'phpunit', 'eslint'] as $binary) {
+        $executable = $binary === 'eslint'
+            ? $consumer . '/node_modules/.bin/eslint'
+            : $binaries . '/' . $binary;
         $failureVariable = 'GRUMPHP_TEST_FAIL_' . strtoupper($binary);
         $filesystem->dumpFile(
             $executable,
@@ -86,7 +89,7 @@ try {
         'require' => ['php' => '^8.4'],
         'config' => ['allow-plugins' => false],
     ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT) . "\n");
-    $filesystem->dumpFile($consumer . '/.gitignore', "vendor/\ncalls.log\n*.cache\n");
+    $filesystem->dumpFile($consumer . '/.gitignore', "vendor/\nnode_modules/\ncalls.log\n*.cache\n");
     $run([PHP_BINARY, $repo . '/bin/sync-coding-standards.php']);
     check(trim($run(['git', 'config', '--local', 'core.hooksPath'])) === '.githooks', 'Hooks not activated.');
     $run([$binaries . '/grumphp', 'list', '--no-ansi']);
@@ -107,6 +110,19 @@ try {
     $run(['git', 'checkout', '-qb', 'develop']);
     $run(['git', 'commit', '--allow-empty', '-qm', 'feat: protected branch'], 1, 'Direct commits');
     $run(['git', 'checkout', '-q', 'feature/hooks']);
+
+    foreach (['js', 'ts', 'vue'] as $extension) {
+        $file = 'frontend.' . $extension;
+        $filesystem->dumpFile($consumer . '/' . $file, "export const value = 1;\n");
+        $run(['git', 'add', $file]);
+        $environment['GRUMPHP_TEST_FAIL_ESLINT'] = '1';
+        $run(['git', 'commit', '-qm', 'feat: invalid frontend'], 1, 'Expected eslint failure');
+        $environment['GRUMPHP_TEST_FAIL_ESLINT'] = '0';
+        $run(['git', 'commit', '-qm', 'feat: valid frontend']);
+        $calls = file_get_contents($consumer . '/calls.log');
+        check(str_contains($calls, $file) && str_contains($calls, '--config=eslint.config.mjs'), 'ESLint arguments missing.');
+        check(! str_contains($calls, '--fix'), 'Commit must not autofix files.');
+    }
 
     $debug = $consumer . '/debug.js';
     $filesystem->dumpFile($debug, "console.log('debug');\n");
