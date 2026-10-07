@@ -213,6 +213,9 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-plugins
 
+      - name: Verify frontend consumer sync
+        run: composer --no-plugins ci:frontend-consumer
+
       - name: Verify GrumPHP consumer hooks
         run: composer --no-plugins ci:grumphp-consumer
 
