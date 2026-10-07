@@ -34,6 +34,13 @@ $errorsCount = 0;
 
 fwrite(STDOUT, '[' . CLI_COLORS['blue'] . 'INFO' . CLI_COLORS['reset'] . '] Syncing coding standard rulesets…' . PHP_EOL);
 
+try {
+    $frontendPackage = prepareFrontendPackage($projectRoot);
+} catch (RuntimeException | JsonException $exception) {
+    fwrite(STDERR, '[FAIL] ' . $exception->getMessage() . PHP_EOL);
+    exit(1);
+}
+
 foreach (FILES_TO_SYNC as $source => $target) {
     $sourcePath = $vendorRoot . $source;
     $targetPath = $projectRoot . '/' . $target;
@@ -71,6 +78,18 @@ if ($errorsCount > 0) {
     exit(1);
 }
 
+if ($frontendPackage !== null) {
+    $packagePath = $projectRoot . '/package.json';
+    if (! is_file($packagePath) || file_get_contents($packagePath) !== $frontendPackage) {
+        if (file_put_contents($packagePath, $frontendPackage) === false) {
+            fwrite(STDERR, '[FAIL] Could not write package.json.' . PHP_EOL);
+            exit(1);
+        }
+
+        fwrite(STDOUT, '[INFO] Frontend settings synchronized. Run npm install to update installed packages and package-lock.json.' . PHP_EOL);
+    }
+}
+
 // Activate hooks only when invoked from the consumer repository root.
 $gitRoot = runGitCommand(['rev-parse', '--show-toplevel']);
 if ($gitRoot['code'] === 0 && realpath($gitRoot['output']) === realpath($projectRoot)) {
@@ -90,6 +109,7 @@ exit(0);
 
 /**
  * @param list<string> $arguments
+ *
  * @return array{code: int, output: string, error: string}
  */
 function runGitCommand(array $arguments): array
@@ -111,4 +131,114 @@ function runGitCommand(array $arguments): array
     fclose($pipes[2]);
 
     return ['code' => proc_close($process), 'output' => trim($output), 'error' => trim($error)];
+}
+
+/**
+ * @return array<string, string>
+ */
+function frontendDependencies(string $projectRoot): array
+{
+    $installedPath = $projectRoot . '/vendor/composer/installed.json';
+    if (! is_file($installedPath)) {
+        return [];
+    }
+
+    $installed = json_decode(file_get_contents($installedPath), false, 512, JSON_THROW_ON_ERROR);
+    $packages = is_array($installed) ? $installed : ($installed->packages ?? []);
+    if (! is_array($packages)) {
+        throw new RuntimeException('Invalid Composer installed package metadata.');
+    }
+
+    foreach ($packages as $package) {
+        if (($package->name ?? null) !== 'maarsson/dev-tools') {
+            continue;
+        }
+
+        $dependencies = $package->extra->{'frontend-tools'} ?? null;
+        if ($dependencies === null) {
+            return [];
+        }
+        if (! $dependencies instanceof stdClass) {
+            throw new RuntimeException('dev-tools extra.frontend-tools must be an object.');
+        }
+
+        $result = (array) $dependencies;
+        foreach ($result as $name => $version) {
+            if (! is_string($name) || ! is_string($version) || trim($version) === '') {
+                throw new RuntimeException('Invalid npm dependency in dev-tools extra.frontend-tools.');
+            }
+        }
+
+        return $result;
+    }
+
+    return [];
+}
+
+function prepareFrontendPackage(string $projectRoot): ?string
+{
+    $dependencies = frontendDependencies($projectRoot);
+    if ($dependencies === []) {
+        return null;
+    }
+
+    $packagePath = $projectRoot . '/package.json';
+    $package = is_file($packagePath)
+        ? json_decode(file_get_contents($packagePath), false, 512, JSON_THROW_ON_ERROR)
+        : (object) ['private' => true, 'type' => 'module'];
+    if (! $package instanceof stdClass) {
+        throw new RuntimeException('package.json must contain an object.');
+    }
+
+    $managed = $package->{'maarsson-coding-standard'} ?? new stdClass();
+    if (! $managed instanceof stdClass) {
+        throw new RuntimeException('package.json maarsson-coding-standard must be an object.');
+    }
+
+    $runtimeDependencies = $package->dependencies ?? new stdClass();
+    if (! $runtimeDependencies instanceof stdClass) {
+        throw new RuntimeException('package.json dependencies must be an object.');
+    }
+    foreach ($dependencies as $name => $version) {
+        if (property_exists($runtimeDependencies, $name)) {
+            throw new RuntimeException('Frontend tool ' . $name . ' already exists in dependencies; move it to devDependencies before syncing.');
+        }
+    }
+
+    $scripts = [];
+    if (isset($dependencies['eslint'])) {
+        $scripts = ['eslint' => 'eslint .', 'eslint:fix' => 'eslint . --fix'];
+    }
+    $sections = ['devDependencies' => $dependencies, 'scripts' => $scripts];
+    foreach ($sections as $section => $expected) {
+        $current = $package->{$section} ?? new stdClass();
+        $previous = $managed->{$section} ?? new stdClass();
+        if (! $current instanceof stdClass || ! $previous instanceof stdClass) {
+            throw new RuntimeException('package.json ' . $section . ' and its managed settings must be objects.');
+        }
+
+        foreach ($expected as $name => $value) {
+            if (property_exists($current, $name)
+                && $current->{$name} !== $value
+                && (! property_exists($previous, $name) || $current->{$name} !== $previous->{$name})) {
+                throw new RuntimeException('Conflicting package.json ' . $section . ' entry: ' . $name . '. Resolve the local override before syncing.');
+            }
+            $current->{$name} = $value;
+        }
+        foreach ((array) $previous as $name => $value) {
+            if (! array_key_exists($name, $expected) && ($current->{$name} ?? null) === $value) {
+                unset($current->{$name});
+            }
+        }
+        if ($section === 'devDependencies') {
+            $sorted = (array) $current;
+            ksort($sorted);
+            $current = (object) $sorted;
+        }
+        $package->{$section} = $current;
+        $managed->{$section} = (object) $expected;
+    }
+    $package->{'maarsson-coding-standard'} = $managed;
+
+    return json_encode($package, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
 }
