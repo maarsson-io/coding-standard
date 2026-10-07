@@ -29,6 +29,7 @@ Currently supported:
 - [PHP CS Fixer](https://cs.symfony.com/) - automatically enforce modern code style
 - [Larastan](https://github.com/larastan/larastan) - catches both obvious & tricky bugs
 - [GrumPHP](https://github.com/phpro/grumphp) - runs quality checks through Git hooks
+- [ESLint](https://eslint.org/) - statically analyzes JavaScript, TypeScript, and Vue files, including stylistic rules
 
 ---
 
@@ -36,6 +37,7 @@ Currently supported:
 
 - PHP ^8.4
 - Composer
+- For ESLint: npm and Node.js `^20.19.0 || ^22.13.0 || >=24`
 
 ---
 
@@ -122,6 +124,7 @@ Currently applied files:
 - `.php-cs-fixer.php`
 - `phpstan.neon`
 - `grumphp.yml`
+- `eslint.config.mjs`
 - `.githooks/pre-commit`
 - `.githooks/commit-msg`
 - `.githooks/pre-push`
@@ -152,6 +155,7 @@ composer require --dev shipmonk/dead-code-detector:^1.4
 composer require --dev php-parallel-lint/php-parallel-lint:^1.4
 composer config allow-plugins.phpro/grumphp false
 composer require --dev phpro/grumphp:^2.25
+npm install --save-dev eslint@^10 @eslint/js@^10 @stylistic/eslint-plugin@^5 eslint-plugin-vue@^10 globals@^17 typescript@^6 typescript-eslint@^8
 ```
 
 Note: `*.cache` should be added to `.gitignore`.
@@ -162,7 +166,7 @@ Set `config.allow-plugins.phpro/grumphp` to `false` in the consumer's `composer.
 
 | Hook | Checks |
 | --- | --- |
-| `pre-commit` | PHP lint and version, Composer validation, JSON/XML/YAML, PHPCS, PHP-CS-Fixer, debug statements, branch name |
+| `pre-commit` | PHP lint and version, Composer validation, JSON/XML/YAML, PHPCS, PHP-CS-Fixer, ESLint, debug statements, branch name |
 | `commit-msg` | Conventional Commit format |
 | `pre-push` | PHPStan with Larastan and dead code detection, PHPMD, PHPUnit, Composer autoload validation |
 
@@ -205,6 +209,17 @@ Run PHPStan to check for bugs and unused methods, constants, enum cases, and pro
 `./vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=1G --no-progress`
 
 Analyse the complete configured codebase so that dead code detection includes references across files and tests.
+
+
+### Using ESLint with the installed ruleset
+
+Run static analysis on JS/TS/Vue code to quickly find problems and code styling issues:
+
+`npx eslint .`
+
+Or auto-fix the fixable violations:
+
+`npx eslint . --fix`
 
 ---
 
