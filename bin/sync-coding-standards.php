@@ -15,6 +15,7 @@ const FILES_TO_SYNC = [
     'resources/php-cs-fixer.php.dist' => '.php-cs-fixer.php',
     'resources/phpstan.neon.dist' => 'phpstan.neon',
     'resources/grumphp.yml.dist' => 'grumphp.yml',
+    'resources/eslint.config.mjs.dist' => 'eslint.config.mjs',
     'resources/githooks/pre-commit' => '.githooks/pre-commit',
     'resources/githooks/commit-msg' => '.githooks/commit-msg',
     'resources/githooks/pre-push' => '.githooks/pre-push',

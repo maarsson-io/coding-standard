@@ -58,6 +58,7 @@ test -f .phpcs.xml || fail ".phpcs.xml was not copied to project root"
 test ! -f phpcs.xml || fail "Legacy phpcs.xml should not be created"
 test -f .php-cs-fixer.php || fail ".php-cs-fixer.php was not copied to project root"
 test -f phpstan.neon || fail "phpstan.neon was not copied to project root"
+test -f eslint.config.mjs || fail "eslint.config.mjs was not copied to project root"
 test -f grumphp.yml || fail "grumphp.yml was not copied to project root"
 for hook in pre-commit commit-msg pre-push; do
   test -x ".githooks/$hook" || fail "$hook was not installed as executable"
@@ -72,6 +73,8 @@ cmp -s phpstan.neon ./vendor/maarsson/coding-standard/resources/phpstan.neon.dis
 
 cmp -s grumphp.yml ./vendor/maarsson/coding-standard/resources/grumphp.yml.dist || fail "grumphp.yml mismatch error"
 
+cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.config.mjs.dist || fail "eslint.config.mjs mismatch error"
+
 info "Asserting Git hook activation…"
 git init -q
 git config core.hooksPath .old-hooks
@@ -84,6 +87,7 @@ echo "local change" >> .phpcs.xml
 echo "local change" >> .php-cs-fixer.php
 echo "local change" >> phpstan.neon
 echo "local change" >> grumphp.yml
+echo "local change" >> eslint.config.mjs
 for hook in pre-commit commit-msg pre-push; do
   echo "local change" >> ".githooks/$hook"
   chmod -x ".githooks/$hook"
@@ -102,5 +106,7 @@ for hook in pre-commit commit-msg pre-push; do
   test -x ".githooks/$hook" || fail "$hook permissions were not restored"
   cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook overwrite error"
 done
+
+cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.config.mjs.dist || fail "eslint.config.mjs overwrite error"
 
 ok "Consumer smoke test passed."
