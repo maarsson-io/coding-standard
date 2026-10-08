@@ -144,6 +144,14 @@ This behavior is intentional and ensures consistency across projects. If you nee
 
 ---
 
+## Laravel Boost integration
+
+This package provides a guideline and the `code-quality-checks` skill for Laravel Boost. The skill explains which checks to run, their scope, and how to compare failures in legacy projects.
+
+In a consumer project with Laravel Boost installed, run `php artisan boost:install` and select the `maarsson/coding-standard` package when offered. For an existing Boost setup, use `php artisan boost:update --discover`.
+
+---
+
 ## Usage
 
 After the sync script runs, the ruleset files will exist in your project root, but the corresponding tools must also be installed. However if you installed the package via `maarsson/dev-tools` you don’t need to install these manually. Otherwise run:
