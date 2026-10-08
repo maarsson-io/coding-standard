@@ -17,6 +17,7 @@ $environment = [
     'GRUMPHP_TEST_FAIL_PHPSTAN' => '0',
     'GRUMPHP_TEST_FAIL_PHPUNIT' => '0',
     'GRUMPHP_TEST_FAIL_ESLINT' => '0',
+    'GRUMPHP_TEST_FAIL_STYLELINT' => '0',
 ];
 
 /**
@@ -66,9 +67,9 @@ try {
     }
 
     // Verify hook orchestration separately from frontend checks, application analysis and tests.
-    foreach (['phpstan', 'phpunit', 'eslint'] as $binary) {
-        $executable = $binary === 'eslint'
-            ? $consumer . '/node_modules/.bin/eslint'
+    foreach (['phpstan', 'phpunit', 'eslint', 'stylelint'] as $binary) {
+        $executable = in_array($binary, ['eslint', 'stylelint'], true)
+            ? $consumer . '/node_modules/.bin/' . $binary
             : $binaries . '/' . $binary;
         $failureVariable = 'GRUMPHP_TEST_FAIL_' . strtoupper($binary);
         $filesystem->dumpFile(
@@ -121,6 +122,19 @@ try {
         $run(['git', 'commit', '-qm', 'feat: valid frontend']);
         $calls = file_get_contents($consumer . '/calls.log');
         check(str_contains($calls, $file) && str_contains($calls, '--config=eslint.config.mjs'), 'ESLint arguments missing.');
+        check(! str_contains($calls, '--fix'), 'Commit must not autofix files.');
+    }
+
+    foreach (['css', 'scss', 'vue'] as $extension) {
+        $file = 'styles.' . $extension;
+        $filesystem->dumpFile($consumer . '/' . $file, ".example { color: red; }\n");
+        $run(['git', 'add', $file]);
+        $environment['GRUMPHP_TEST_FAIL_STYLELINT'] = '1';
+        $run(['git', 'commit', '-qm', 'feat: invalid styles'], 1, 'Expected stylelint failure');
+        $environment['GRUMPHP_TEST_FAIL_STYLELINT'] = '0';
+        $run(['git', 'commit', '-qm', 'feat: valid styles']);
+        $calls = file_get_contents($consumer . '/calls.log');
+        check(str_contains($calls, 'stylelint --config=stylelint.config.mjs ' . $file), 'Stylelint arguments missing.');
         check(! str_contains($calls, '--fix'), 'Commit must not autofix files.');
     }
 

@@ -81,6 +81,12 @@ grumphp:
             config: eslint.config.mjs
             triggered_by: ['js', 'ts', 'vue']
 
+        # Stylelint - CSS, SCSS and Vue style checks
+        stylelint:
+            bin: node_modules/.bin/stylelint
+            config: stylelint.config.mjs
+            triggered_by: ['css', 'scss', 'vue']
+
         # PHPMD - Mess Detector
         phpmd:
             ruleset: ['phpmd.yml']
@@ -213,6 +219,7 @@ grumphp:
                 - phpcs
                 - phpcsfixer
                 - eslint
+                - stylelint
                 - git_blacklist
                 - git_branch_name
 

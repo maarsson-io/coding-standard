@@ -46,11 +46,15 @@ try {
     $sync();
     verifyFrontend(json_decode(file_get_contents($packagePath), true) === json_decode(json_encode($original), true), 'No metadata should preserve package.json.');
 
-    $metadata(['eslint' => '^10.12.0', '@eslint/js' => '^10.0.1']);
+    $metadata(['eslint' => '^10.12.0', '@eslint/js' => '^10.0.1', 'stylelint' => '^17.16.0']);
     $sync();
     $result = json_decode(file_get_contents($packagePath), false, 512, JSON_THROW_ON_ERROR);
     verifyFrontend($result->scripts->build === 'vite build' && $result->scripts->dev === 'vite', 'Application scripts changed.');
     verifyFrontend($result->scripts->eslint === 'eslint .' && $result->scripts->{'eslint:fix'} === 'eslint . --fix', 'Lint scripts missing.');
+    verifyFrontend($result->scripts->stylelint === 'stylelint "**/*.{css,scss,vue}"'
+        && $result->scripts->{'stylelint:fix'} === 'stylelint "**/*.{css,scss,vue}" --fix', 'Stylelint scripts missing.');
+    verifyFrontend($result->devDependencies->stylelint === '^17.16.0', 'Stylelint dependency missing.');
+    verifyFrontend(file_get_contents($consumer . '/stylelint.config.mjs') === file_get_contents($repo . '/resources/stylelint.config.mjs.dist'), 'Wrong Stylelint config.');
     verifyFrontend($result->dependencies->vue === '^3.5' && $result->devDependencies->vite === '^8.0', 'Application dependencies changed.');
     verifyFrontend($result->custom instanceof stdClass, 'Empty object changed.');
     verifyFrontend(file_get_contents($consumer . '/eslint.config.mjs') === file_get_contents($repo . '/resources/eslint.config.mjs.dist'), 'Wrong ESLint config.');
@@ -59,11 +63,20 @@ try {
     $sync();
     verifyFrontend(file_get_contents($packagePath) === $first, 'Sync is not idempotent.');
 
+    $changed = json_decode($first);
+    $changed->scripts->stylelint = 'custom-stylelint';
+    $writeJson($packagePath, $changed);
+    $filesystem->dumpFile($consumer . '/stylelint.config.mjs', 'local config');
+    $sync(false, 'Conflicting package.json scripts entry: stylelint');
+    verifyFrontend(file_get_contents($consumer . '/stylelint.config.mjs') === 'local config', 'Conflict modified Stylelint config.');
+    $filesystem->dumpFile($packagePath, $first);
+
     $metadata(['eslint' => '^11.0.0']);
     $sync();
     $result = json_decode(file_get_contents($packagePath));
     verifyFrontend($result->devDependencies->eslint === '^11.0.0', 'Managed upgrade failed.');
     verifyFrontend(! isset($result->devDependencies->{'@eslint/js'}), 'Removed managed dependency remains.');
+    verifyFrontend(! isset($result->devDependencies->stylelint) && ! isset($result->scripts->stylelint) && ! isset($result->scripts->{'stylelint:fix'}), 'Removed Stylelint settings remain.');
 
     foreach (['devDependencies' => ['eslint' => '^9.0'], 'scripts' => ['eslint' => 'custom-lint']] as $section => $override) {
         $changed = clone $result;
