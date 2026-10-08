@@ -16,6 +16,7 @@ const FILES_TO_SYNC = [
     'resources/phpstan.neon.dist' => 'phpstan.neon',
     'resources/grumphp.yml.dist' => 'grumphp.yml',
     'resources/eslint.config.mjs.dist' => 'eslint.config.mjs',
+    'resources/stylelint.config.mjs.dist' => 'stylelint.config.mjs',
     'resources/githooks/pre-commit' => '.githooks/pre-commit',
     'resources/githooks/commit-msg' => '.githooks/commit-msg',
     'resources/githooks/pre-push' => '.githooks/pre-push',
@@ -208,6 +209,10 @@ function prepareFrontendPackage(string $projectRoot): ?string
     $scripts = [];
     if (isset($dependencies['eslint'])) {
         $scripts = ['eslint' => 'eslint .', 'eslint:fix' => 'eslint . --fix'];
+    }
+    if (isset($dependencies['stylelint'])) {
+        $scripts['stylelint'] = 'stylelint "**/*.{css,scss,vue}"';
+        $scripts['stylelint:fix'] = 'stylelint "**/*.{css,scss,vue}" --fix';
     }
     $sections = ['devDependencies' => $dependencies, 'scripts' => $scripts];
     foreach ($sections as $section => $expected) {

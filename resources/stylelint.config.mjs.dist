@@ -1,0 +1,39 @@
+import tailwind from '@dreamsicle.io/stylelint-config-tailwindcss';
+
+export default {
+  plugins: ['@stylistic/stylelint-plugin'],
+  extends: [
+    'stylelint-config-standard-scss',
+    '@dreamsicle.io/stylelint-config-tailwindcss',
+    'stylelint-config-standard-vue/scss',
+  ],
+  ignoreFiles: [
+    '**/*.min.css',
+    '**/vendor/**',
+    '**/node_modules/**',
+    'public/build/**',
+  ],
+  rules: {
+    '@stylistic/indentation': 2,
+  },
+  overrides: [
+    {
+      files: ['**/*.css', '**/*.scss', '**/*.vue'],
+      rules: {
+        'nesting-selector-no-missing-scoping-root': [true, {
+          ignoreAtRules: ['mixin', 'custom-variant', 'utility'],
+        }],
+        'selector-class-pattern': [
+          '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$',
+          {
+            message: 'Expected class selector to use kebab-case or BEM',
+          },
+        ],
+        // SCSS rules do not inherit Tailwind's custom at-rule syntax.
+        'scss/at-rule-no-unknown': [true, {
+          ignoreAtRules: Object.keys(tailwind.languageOptions.syntax.atRules),
+        }],
+      },
+    },
+  ],
+};

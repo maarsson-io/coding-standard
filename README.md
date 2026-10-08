@@ -30,6 +30,7 @@ Currently supported:
 - [Larastan](https://github.com/larastan/larastan) - catches both obvious & tricky bugs
 - [GrumPHP](https://github.com/phpro/grumphp) - runs quality checks through Git hooks
 - [ESLint](https://eslint.org/) - statically analyzes JavaScript, TypeScript, and Vue files, including stylistic rules
+- [Stylelint](https://stylelint.io/) - CSS linter to avoid errors and enforce conventions
 
 ---
 
@@ -37,7 +38,7 @@ Currently supported:
 
 - PHP ^8.4
 - Composer
-- For ESLint: npm and Node.js `^20.19.0 || ^22.13.0 || >=24`
+- For the frontend tools: npm and Node.js `^22.13.0 || >=24`
 
 ---
 
@@ -125,6 +126,7 @@ Currently applied files:
 - `phpstan.neon`
 - `grumphp.yml`
 - `eslint.config.mjs`
+- `stylelint.config.mjs`
 - `.githooks/pre-commit`
 - `.githooks/commit-msg`
 - `.githooks/pre-push`
@@ -142,6 +144,14 @@ This behavior is intentional and ensures consistency across projects. If you nee
 
 ---
 
+## Laravel Boost integration
+
+This package provides a guideline and the `code-quality-checks` skill for Laravel Boost. The skill explains which checks to run, their scope, and how to compare failures in legacy projects.
+
+In a consumer project with Laravel Boost installed, run `php artisan boost:install` and select the `maarsson/coding-standard` package when offered. For an existing Boost setup, use `php artisan boost:update --discover`.
+
+---
+
 ## Usage
 
 After the sync script runs, the ruleset files will exist in your project root, but the corresponding tools must also be installed. However if you installed the package via `maarsson/dev-tools` you don’t need to install these manually. Otherwise run:
@@ -156,6 +166,7 @@ composer require --dev php-parallel-lint/php-parallel-lint:^1.4
 composer config allow-plugins.phpro/grumphp false
 composer require --dev phpro/grumphp:^2.25
 npm install --save-dev eslint@^10 @eslint/js@^10 @stylistic/eslint-plugin@^5 eslint-plugin-vue@^10 globals@^17 typescript@^6 typescript-eslint@^8
+npm install --save-dev stylelint@^17 @stylistic/stylelint-plugin@^5 postcss-html@^2 stylelint-config-standard@^40 stylelint-config-standard-scss@^17 stylelint-config-recommended-vue@^2 stylelint-config-standard-vue@^2 @dreamsicle.io/stylelint-config-tailwindcss@^1.2.2
 ```
 
 Note: `*.cache` should be added to `.gitignore`.
@@ -166,7 +177,7 @@ Set `config.allow-plugins.phpro/grumphp` to `false` in the consumer's `composer.
 
 | Hook | Checks |
 | --- | --- |
-| `pre-commit` | PHP lint and version, Composer validation, JSON/XML/YAML, PHPCS, PHP-CS-Fixer, ESLint, debug statements, branch name |
+| `pre-commit` | PHP lint and version, Composer validation, JSON/XML/YAML, PHPCS, PHP-CS-Fixer, ESLint, Stylelint, debug statements, branch name |
 | `commit-msg` | Conventional Commit format |
 | `pre-push` | PHPStan with Larastan and dead code detection, PHPMD, PHPUnit, Composer autoload validation |
 
@@ -220,6 +231,16 @@ Run static analysis on JS/TS/Vue code to quickly find problems and code styling 
 Or auto-fix the fixable violations:
 
 `npx eslint . --fix`
+
+### Using Stylelint with the installed ruleset
+
+Check CSS, SCSS, and Vue styles:
+
+`npx stylelint "**/*.{css,scss,vue}"`
+
+Or auto-fix the fixable violations:
+
+`npx stylelint "**/*.{css,scss,vue}" --fix`
 
 ---
 
