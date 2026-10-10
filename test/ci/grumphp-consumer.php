@@ -65,6 +65,8 @@ try {
     foreach (['grumphp', 'parallel-lint', 'phpcs', 'php-cs-fixer', 'phpmd'] as $binary) {
         $filesystem->symlink($repo . '/vendor/bin/' . $binary, $binaries . '/' . $binary);
     }
+    $filesystem->symlink($repo . '/vendor/autoload.php', $consumer . '/vendor/autoload.php');
+    $checkDebugStatements = [PHP_BINARY, $repo . '/bin/check-debug-statements.php'];
 
     // Verify hook orchestration separately from frontend checks, application analysis and tests.
     foreach (['phpstan', 'phpunit', 'eslint', 'stylelint'] as $binary) {
@@ -142,8 +144,17 @@ try {
     $filesystem->dumpFile($debug, "console.log('debug');\n");
     $run(['git', 'add', 'debug.js']);
     $run(['git', 'commit', '-qm', 'feat: debug statement'], 1, 'blacklisted keywords');
+
+    // The CI script applies the same task configuration to every tracked file.
+    $run($checkDebugStatements, 1, 'debug.js');
     $run(['git', 'reset', '-q', 'HEAD', '--', 'debug.js']);
     $filesystem->remove($debug);
+    $published = $consumer . '/public/vendor/published.js';
+    $filesystem->dumpFile($published, "console.log('debug');\n");
+    $run(['git', 'add', '-f', 'public/vendor/published.js']);
+    $run($checkDebugStatements, 0, 'No blacklisted keywords found');
+    $run(['git', 'reset', '-q', 'HEAD', '--', 'public/vendor/published.js']);
+    $filesystem->remove($consumer . '/public');
 
     $filesystem->copy($bad, $source, true);
     $run(['git', 'add', 'app/OperatorSpacing.php']);

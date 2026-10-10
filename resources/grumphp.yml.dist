@@ -104,23 +104,26 @@ grumphp:
 
         # Git Blacklist - Prevent debug statements
         git_blacklist:
+            # Keywords are Perl-compatible regular expressions. The leading lookbehind rejects a keyword
+            # that continues a longer name or is called as a method, so `add(` and `Dialog.alert(` do not
+            # match while `dd(collect())` still does.
             keywords:
                 # Laravel/PHP Debug
-                - 'dd('
-                - 'dump('
-                - 'var_dump('
-                - 'print_r('
-                - 'var_export('
-                - 'die('
-                - 'exit('
+                - '(?<![\w.>])dd\('
+                - '(?<![\w.>])dump\('
+                - '(?<![\w.>])var_dump\('
+                - '(?<![\w.>])print_r\('
+                - '(?<![\w.>])var_export\('
+                - '(?<![\w.>])die\('
+                - '(?<![\w.>])exit\('
 
                 # JavaScript/Vue Debug
-                - 'console.log('
-                - 'console.error('
-                - 'console.warn('
-                - 'console.debug('
-                - 'debugger;'
-                - 'alert('
+                - '(?<![\w.>])console\.log\('
+                - '(?<![\w.>])console\.error\('
+                - '(?<![\w.>])console\.warn\('
+                - '(?<![\w.>])console\.debug\('
+                - '(?<![\w.>])debugger;'
+                - '(?<![\w.>])alert\('
 
                 # Development markers
                 - 'FIXME:'
@@ -134,6 +137,10 @@ grumphp:
 
             whitelist_patterns: []
 
+            # Published third-party assets are committed but not maintained here.
+            ignore_patterns:
+                - '/^public\/vendor\//'
+
             triggered_by:
               - php
               - blade.php
@@ -144,7 +151,7 @@ grumphp:
               - tsx
               - mjs
               - cjs
-            regexp_type: G
+            regexp_type: P
             match_word: false
 
         # Commit Message Format
