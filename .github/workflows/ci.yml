@@ -233,6 +233,9 @@ jobs:
           php-version: '8.4'
           tools: composer
 
+      - name: Validate Composer configuration
+        run: composer validate --strict --no-plugins
+
       - name: Install repo dependencies (optional)
         run: composer install --no-interaction --prefer-dist --no-plugins
 
