@@ -64,7 +64,7 @@ In your project’s `composer.json` add:
 {
   "scripts": {
     "coding-standard:sync": [
-      "vendor/bin/sync-coding-standards.php"
+      "@php -r \"if (getenv('COMPOSER_DEV_MODE') !== '0') { require 'vendor/bin/sync-coding-standards.php'; }\""
     ]
   }
 }
@@ -78,7 +78,7 @@ Extend your project’s `composer.json` scripts section to include:
 {
   "scripts": {
     "coding-standard:sync": [
-      "vendor/bin/sync-coding-standards.php"
+      "@php -r \"if (getenv('COMPOSER_DEV_MODE') !== '0') { require 'vendor/bin/sync-coding-standards.php'; }\""
     ],
     "post-install-cmd": [
       "@coding-standard:sync"
@@ -90,7 +90,11 @@ Extend your project’s `composer.json` scripts section to include:
 }
 ```
 
-With this setup, the coding standards are applied automatically.
+With this setup, the coding standards are applied automatically for development installs and updates.
+
+Composer sets `COMPOSER_DEV_MODE=0` when `install` or `update` runs with `--no-dev`. The conditional hook skips synchronization in that mode because this development dependency and its sync executable are not installed. This prevents production deployments from failing with `vendor/bin/sync-coding-standards.php: not found`. Development installs still run the sync script and propagate any failure.
+
+See [Composer script environment variables](https://getcomposer.org/doc/articles/scripts.md#defining-scripts) for details.
 
 ---
 
@@ -99,9 +103,9 @@ With this setup, the coding standards are applied automatically.
 Once configured, the sync script runs automatically in the following cases:
 
 Automatic execution:
-- After composer install
-- After composer update
-- During CI pipelines that run composer install or composer update
+- After `composer install` with development dependencies
+- After `composer update` with development dependencies
+- During CI pipelines that run either command with development dependencies
 
 Manual execution:
 
@@ -138,6 +142,8 @@ When run from a Git repository root, the sync script makes the hooks executable 
 The sync process uses an always overwrite strategy:
 
 - Existing shared rulesets, `grumphp.yml`, and the three managed hook files are replaced
+- Before replacing an existing file, its current contents are saved alongside it as `<filename>.backup`, even if they match the shared version.
+- If a backup cannot be created, that file is not overwritten and the sync exits with an error.
 - This guarantees all projects use the exact same ruleset
 
 This behavior is intentional and ensures consistency across projects. If you need to customize rules per project, fork this repository or manage overrides outside of this package.
@@ -223,6 +229,16 @@ Analyse the complete configured codebase so that dead code detection includes re
 
 
 ### Using ESLint with the installed ruleset
+
+The shared configuration uses `vue.configs['flat/recommended']`, which targets Vue 3. For Vue 2 projects, replace it in `eslint.config.mjs` with:
+
+```js
+vue.configs['flat/vue2-recommended']
+```
+
+Select the ruleset that matches the installed Vue major version before running `--fix`. Vue 3 rules can apply incompatible fixes to Vue 2 code, such as renaming `beforeDestroy` to `beforeUnmount`; the renamed hook will not run in Vue 2.
+
+The sync script overwrites `eslint.config.mjs`, so this Vue 2 adjustment must be preserved separately and reapplied after syncing.
 
 Run static analysis on JS/TS/Vue code to quickly find problems and code styling issues:
 

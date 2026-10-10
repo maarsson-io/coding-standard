@@ -11,7 +11,7 @@ fail() {
   printf "[\033[31mFAIL\033[0m] %s\n" "$1" >&2;exit 1;
 }
 
-WORKDIR="/tmp/coding-standard-consumer-smoke"
+WORKDIR="${CODING_STANDARD_SMOKE_WORKDIR:-/tmp/coding-standard-consumer-smoke}"
 CONSUMER="$WORKDIR/consumer"
 REPO="$WORKDIR/repo"
 
@@ -78,11 +78,19 @@ cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.conf
 
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs mismatch error"
 
+MANAGED_FILES="phpmd.yml .phpcs.xml .php-cs-fixer.php phpstan.neon grumphp.yml eslint.config.mjs stylelint.config.mjs .githooks/pre-commit .githooks/commit-msg .githooks/pre-push"
+for file in $MANAGED_FILES; do
+  test ! -e "$file.backup" || fail "$file backup should not exist after first sync"
+done
+
 info "Asserting Git hook activation…"
 git init -q
 git config core.hooksPath .old-hooks
 ./vendor/bin/sync-coding-standards.php
 test "$(git config --local core.hooksPath)" = .githooks || fail "Git hooks were not activated"
+for file in $MANAGED_FILES; do
+  cmp -s "$file" "$file.backup" || fail "$file backup does not match the existing file"
+done
 
 info "Asserting always-overwrite behavior…"
 echo "local change" >> phpmd.yml
@@ -96,7 +104,15 @@ for hook in pre-commit commit-msg pre-push; do
   echo "local change" >> ".githooks/$hook"
   chmod -x ".githooks/$hook"
 done
+mkdir "$CONSUMER/expected-backups"
+for file in $MANAGED_FILES; do
+  cp "$file" "$CONSUMER/expected-backups/$(basename "$file")"
+done
 ./vendor/bin/sync-coding-standards.php
+for file in $MANAGED_FILES; do
+  cmp -s "$file.backup.1" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file local changes were not backed up"
+  cmp -s "$file.backup" "$file" || fail "$file previous backup was overwritten"
+done
 cmp -s phpmd.yml ./vendor/maarsson/coding-standard/resources/phpmd.yml.dist || fail "phpmd.yml overwrite error"
 
 cmp -s .phpcs.xml ./vendor/maarsson/coding-standard/resources/phpcs.xml.dist || fail ".phpcs.xml overwrite error"
@@ -114,5 +130,23 @@ done
 cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.config.mjs.dist || fail "eslint.config.mjs overwrite error"
 
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs overwrite error"
+
+info "Asserting repeated sync preserves earlier backups…"
+./vendor/bin/sync-coding-standards.php
+for file in $MANAGED_FILES; do
+  cmp -s "$file.backup.2" "$file" || fail "$file numbered backup was not created"
+  cmp -s "$file.backup.1" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file local backup was overwritten"
+done
+rm -rf "$CONSUMER/expected-backups"
+
+info "Asserting backup failure prevents overwrite…"
+rm phpmd.yml
+mkdir phpmd.yml
+echo "preserve me" > phpmd.yml/local-change
+if ./vendor/bin/sync-coding-standards.php > "$CONSUMER/sync-failure.log" 2>&1; then
+  fail "Sync should fail when a backup cannot be created"
+fi
+test -f phpmd.yml/local-change || fail "Backup failure did not preserve the existing target"
+grep -Fq 'Failed to back up phpmd.yml; file was not overwritten.' "$CONSUMER/sync-failure.log" || fail "Backup failure was not reported"
 
 ok "Consumer smoke test passed."
