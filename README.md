@@ -36,7 +36,7 @@ Currently supported:
 
 ## Requirements
 
-- PHP ^8.4
+- PHP `>=8.4 <8.6`
 - Composer
 - For the frontend tools: npm and Node.js `^22.13.0 || >=24`
 
