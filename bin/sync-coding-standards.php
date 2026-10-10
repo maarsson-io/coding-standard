@@ -17,6 +17,7 @@ const FILES_TO_SYNC = [
     'resources/grumphp.yml.dist' => 'grumphp.yml',
     'resources/eslint.config.mjs.dist' => 'eslint.config.mjs',
     'resources/stylelint.config.mjs.dist' => 'stylelint.config.mjs',
+    'resources/ci.yml.dist' => '.github/workflows/ci.yml',
     'resources/githooks/pre-commit' => '.githooks/pre-commit',
     'resources/githooks/commit-msg' => '.githooks/commit-msg',
     'resources/githooks/pre-push' => '.githooks/pre-push',

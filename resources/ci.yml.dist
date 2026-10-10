@@ -1,0 +1,204 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: CI Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+
+    env:
+      APP_ENV: testing
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: http://localhost
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_DRIVER: array
+      CACHE_STORE: array
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      TELESCOPE_ENABLED: false
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: sqlite3, pdo_sqlite, pcntl
+          coverage: none
+          tools: composer
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Validate Composer configuration
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        # Check the committed rulesets without overwriting them via coding-standard:sync.
+        run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts
+
+      - name: Bootstrap Composer autoloading and Laravel packages
+        run: composer run-script post-autoload-dump --no-interaction
+
+      - name: Validate Composer autoloading
+        run: vendor/bin/grumphp run --tasks=composer_validate_autoload
+
+      - name: JSON Lint
+        run: vendor/bin/grumphp run --tasks=jsonlint
+
+      - name: XML Lint
+        run: vendor/bin/grumphp run --tasks=xmllint
+
+      - name: YAML Lint
+        run: vendor/bin/grumphp run --tasks=yamllint
+
+      - name: Debug Statement Check
+        # GrumPHP runs git_blacklist only in the pre-commit context, so its configured keywords are applied directly.
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Read outside process substitution so a failing yq still fails the step.
+          KEYWORD_LINES=$(yq '.grumphp.tasks.git_blacklist.keywords[]' grumphp.yml)
+          EXTENSION_LINES=$(yq '.grumphp.tasks.git_blacklist.triggered_by[]' grumphp.yml)
+
+          mapfile -t KEYWORDS < <(printf '%s' "$KEYWORD_LINES")
+          mapfile -t EXTENSIONS < <(printf '%s' "$EXTENSION_LINES")
+
+          if [[ ${#KEYWORDS[@]} -eq 0 || ${#EXTENSIONS[@]} -eq 0 ]]; then
+            echo '::notice::No git_blacklist keywords or extensions are configured in grumphp.yml; nothing to check.'
+            exit 0
+          fi
+
+          PATTERNS=()
+          for KEYWORD in "${KEYWORDS[@]}"; do
+            PATTERNS+=(-e "$KEYWORD")
+          done
+
+          # Published third-party assets are committed but not maintained here.
+          PATHSPECS=(':(exclude)public/vendor')
+          for EXTENSION in "${EXTENSIONS[@]}"; do
+            PATHSPECS+=("*.${EXTENSION}")
+          done
+
+          REGEXP_TYPE=$(yq '.grumphp.tasks.git_blacklist.regexp_type // "G"' grumphp.yml)
+          MATCH_WORD=$(yq '.grumphp.tasks.git_blacklist.match_word // false' grumphp.yml)
+
+          OPTIONS=(--cached -n --break --heading "-${REGEXP_TYPE}")
+          if [[ "$MATCH_WORD" == 'true' ]]; then
+            OPTIONS+=(--word-regexp)
+          fi
+
+          STATUS=0
+          git grep "${OPTIONS[@]}" "${PATTERNS[@]}" -- "${PATHSPECS[@]}" || STATUS=$?
+
+          if [[ "$STATUS" -eq 0 ]]; then
+            echo '::error::Blacklisted keywords found in tracked files.'
+            exit 1
+          fi
+
+          if [[ "$STATUS" -ne 1 ]]; then
+            echo "::error::git grep failed with exit code ${STATUS}."
+            exit "$STATUS"
+          fi
+
+      - name: PHP CodeSniffer
+        run: vendor/bin/phpcs --parallel=4 .
+
+      - name: PHP CS Fixer
+        run: vendor/bin/php-cs-fixer check --diff
+
+      - name: PHP Mess Detector
+        run: vendor/bin/phpmd analyze . --format ansi --ruleset phpmd.yml
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=-1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.22.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: ESLint
+        run: npm run eslint
+
+      - name: Stylelint
+        run: npm run stylelint
+
+  php-matrix:
+    name: CI Test PHP ${{ matrix.php }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.5']
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+
+    env:
+      APP_ENV: testing
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: http://localhost
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_DRIVER: array
+      CACHE_STORE: array
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      TELESCOPE_ENABLED: false
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: sqlite3, pdo_sqlite, pcntl
+          coverage: none
+          tools: composer
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Validate Composer configuration
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        # Check the committed rulesets without overwriting them via coding-standard:sync.
+        run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts
+
+      - name: Bootstrap Composer autoloading and Laravel packages
+        run: composer run-script post-autoload-dump --no-interaction
+
+      - name: PHP Lint
+        run: vendor/bin/grumphp run --tasks=phplint
+
+      - name: Laravel tests
+        env:
+          SHELL_VERBOSITY: 1
+        run: >
+          php artisan test
+          --display-all-issues
+          --fail-on-warning
+          --fail-on-notice
+          --fail-on-deprecation
+          --fail-on-risky
+          --fail-on-empty-test-suite

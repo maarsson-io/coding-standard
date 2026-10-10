@@ -61,6 +61,7 @@ test -f phpstan.neon || fail "phpstan.neon was not copied to project root"
 test -f eslint.config.mjs || fail "eslint.config.mjs was not copied to project root"
 test -f stylelint.config.mjs || fail "stylelint.config.mjs was not copied to project root"
 test -f grumphp.yml || fail "grumphp.yml was not copied to project root"
+test -f .github/workflows/ci.yml || fail "CI workflow was not copied to .github/workflows"
 for hook in pre-commit commit-msg pre-push; do
   test -x ".githooks/$hook" || fail "$hook was not installed as executable"
   cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook mismatch error"
@@ -78,7 +79,9 @@ cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.conf
 
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs mismatch error"
 
-MANAGED_FILES="phpmd.yml .phpcs.xml .php-cs-fixer.php phpstan.neon grumphp.yml eslint.config.mjs stylelint.config.mjs .githooks/pre-commit .githooks/commit-msg .githooks/pre-push"
+cmp -s .github/workflows/ci.yml ./vendor/maarsson/coding-standard/resources/ci.yml.dist || fail "CI workflow mismatch error"
+
+MANAGED_FILES="phpmd.yml .phpcs.xml .php-cs-fixer.php phpstan.neon grumphp.yml eslint.config.mjs stylelint.config.mjs .github/workflows/ci.yml .githooks/pre-commit .githooks/commit-msg .githooks/pre-push"
 for file in $MANAGED_FILES; do
   test ! -e "$file.backup" || fail "$file backup should not exist after first sync"
 done
@@ -100,6 +103,7 @@ echo "local change" >> phpstan.neon
 echo "local change" >> grumphp.yml
 echo "local change" >> eslint.config.mjs
 echo "local change" >> stylelint.config.mjs
+echo "# local workflow change" >> .github/workflows/ci.yml
 for hook in pre-commit commit-msg pre-push; do
   echo "local change" >> ".githooks/$hook"
   chmod -x ".githooks/$hook"
@@ -130,6 +134,7 @@ done
 cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.config.mjs.dist || fail "eslint.config.mjs overwrite error"
 
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs overwrite error"
+cmp -s .github/workflows/ci.yml ./vendor/maarsson/coding-standard/resources/ci.yml.dist || fail "CI workflow overwrite error"
 
 info "Asserting repeated sync preserves earlier backups…"
 ./vendor/bin/sync-coding-standards.php
