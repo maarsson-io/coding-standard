@@ -131,6 +131,7 @@ Currently applied files:
 - `grumphp.yml`
 - `eslint.config.mjs`
 - `stylelint.config.mjs`
+- `.github/workflows/ci.yml`
 - `.githooks/pre-commit`
 - `.githooks/commit-msg`
 - `.githooks/pre-push`
@@ -192,6 +193,21 @@ The hooks block the operation when a check fails and do not apply automatic fixe
 The consumer project must provide PHPUnit and `phpunit.xml`. Run the pre-push checks manually with:
 
 `./vendor/bin/grumphp run --testsuite=git_pre_push`
+
+### Checking debug statements outside the pre-commit hook
+
+GrumPHP runs its `git_blacklist` task only in the pre-commit context, on the staged files; `grumphp run` skips it. To apply the same check to every tracked file, for example in CI, run from the project root:
+
+`./vendor/bin/check-debug-statements.php`
+
+The script reads the `git_blacklist` options from `grumphp.yml` and selects files with GrumPHP's own filters, so it follows the hook's keywords, extensions, and whitelist and ignore patterns. The shared CI workflow uses it for its debug statement step.
+
+| Situation | Result |
+| --- | --- |
+| A keyword is found | Fails and lists the matches |
+| No keywords are configured | Passes with a notice |
+| No tracked file matches the filters | Passes with a notice |
+| `phpro/grumphp` is not installed, or `grumphp.yml` is missing | Fails, because the check could not run |
 
 ### Using PHPMD with the installed ruleset
 

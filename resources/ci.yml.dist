@@ -64,54 +64,8 @@ jobs:
         run: vendor/bin/grumphp run --tasks=yamllint
 
       - name: Debug Statement Check
-        # GrumPHP runs git_blacklist only in the pre-commit context, so its configured keywords are applied directly.
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Read outside process substitution so a failing yq still fails the step.
-          KEYWORD_LINES=$(yq '.grumphp.tasks.git_blacklist.keywords[]' grumphp.yml)
-          EXTENSION_LINES=$(yq '.grumphp.tasks.git_blacklist.triggered_by[]' grumphp.yml)
-
-          mapfile -t KEYWORDS < <(printf '%s' "$KEYWORD_LINES")
-          mapfile -t EXTENSIONS < <(printf '%s' "$EXTENSION_LINES")
-
-          if [[ ${#KEYWORDS[@]} -eq 0 || ${#EXTENSIONS[@]} -eq 0 ]]; then
-            echo '::notice::No git_blacklist keywords or extensions are configured in grumphp.yml; nothing to check.'
-            exit 0
-          fi
-
-          PATTERNS=()
-          for KEYWORD in "${KEYWORDS[@]}"; do
-            PATTERNS+=(-e "$KEYWORD")
-          done
-
-          # Published third-party assets are committed but not maintained here.
-          PATHSPECS=(':(exclude)public/vendor')
-          for EXTENSION in "${EXTENSIONS[@]}"; do
-            PATHSPECS+=("*.${EXTENSION}")
-          done
-
-          REGEXP_TYPE=$(yq '.grumphp.tasks.git_blacklist.regexp_type // "G"' grumphp.yml)
-          MATCH_WORD=$(yq '.grumphp.tasks.git_blacklist.match_word // false' grumphp.yml)
-
-          OPTIONS=(--cached -n --break --heading "-${REGEXP_TYPE}")
-          if [[ "$MATCH_WORD" == 'true' ]]; then
-            OPTIONS+=(--word-regexp)
-          fi
-
-          STATUS=0
-          git grep "${OPTIONS[@]}" "${PATTERNS[@]}" -- "${PATHSPECS[@]}" || STATUS=$?
-
-          if [[ "$STATUS" -eq 0 ]]; then
-            echo '::error::Blacklisted keywords found in tracked files.'
-            exit 1
-          fi
-
-          if [[ "$STATUS" -ne 1 ]]; then
-            echo "::error::git grep failed with exit code ${STATUS}."
-            exit "$STATUS"
-          fi
+        # GrumPHP runs git_blacklist only in the pre-commit context, so the script applies the task's configuration.
+        run: vendor/bin/check-debug-statements.php
 
       - name: PHP CodeSniffer
         run: vendor/bin/phpcs --parallel=4 .

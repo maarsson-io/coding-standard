@@ -67,6 +67,13 @@ for hook in pre-commit commit-msg pre-push; do
   cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook mismatch error"
 done
 
+info "Asserting the debug statement check is installed and requires GrumPHP…"
+test -x vendor/bin/check-debug-statements.php || fail "check-debug-statements.php was not installed as executable"
+if ./vendor/bin/check-debug-statements.php > "$WORKDIR/debug-check.log" 2>&1; then
+  fail "Debug statement check should fail without GrumPHP"
+fi
+grep -Fq 'phpro/grumphp must be installed' "$WORKDIR/debug-check.log" || fail "Missing GrumPHP was not reported"
+
 info "Asserting files match package dist versions…"
 cmp -s phpmd.yml ./vendor/maarsson/coding-standard/resources/phpmd.yml.dist || fail "phpmd.yml mismatch error"
 cmp -s .phpcs.xml ./vendor/maarsson/coding-standard/resources/phpcs.xml.dist || fail ".phpcs.xml mismatch error"

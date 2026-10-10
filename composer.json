@@ -73,6 +73,7 @@
         ]
     },
     "bin": [
+        "bin/check-debug-statements.php",
         "bin/sync-coding-standards.php"
     ],
     "config": {
