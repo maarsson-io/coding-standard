@@ -5,7 +5,9 @@ includes:
 
 parameters:
     level: 8
-    phpVersion: 80400
+    phpVersion:
+        min: 80400
+        max: 80599
     paths:
         - app/
         - bootstrap/app.php
