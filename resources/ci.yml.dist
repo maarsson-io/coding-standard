@@ -7,24 +7,24 @@ on:
 permissions:
   contents: read
 
+env:
+  APP_ENV: testing
+  APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+  APP_URL: http://localhost
+  DB_CONNECTION: sqlite
+  DB_DATABASE: ':memory:'
+  CACHE_DRIVER: array
+  CACHE_STORE: array
+  MAIL_MAILER: array
+  QUEUE_CONNECTION: sync
+  SESSION_DRIVER: array
+  TELESCOPE_ENABLED: false
+
 jobs:
   tests:
     name: CI Tests
     runs-on: ubuntu-24.04
     timeout-minutes: 6
-
-    env:
-      APP_ENV: testing
-      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
-      APP_URL: http://localhost
-      DB_CONNECTION: sqlite
-      DB_DATABASE: ':memory:'
-      CACHE_DRIVER: array
-      CACHE_STORE: array
-      MAIL_MAILER: array
-      QUEUE_CONNECTION: sync
-      SESSION_DRIVER: array
-      TELESCOPE_ENABLED: false
 
     steps:
       - name: Check out repository
@@ -149,19 +149,6 @@ jobs:
         php: ['8.4', '8.5']
     runs-on: ubuntu-24.04
     timeout-minutes: 6
-
-    env:
-      APP_ENV: testing
-      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
-      APP_URL: http://localhost
-      DB_CONNECTION: sqlite
-      DB_DATABASE: ':memory:'
-      CACHE_DRIVER: array
-      CACHE_STORE: array
-      MAIL_MAILER: array
-      QUEUE_CONNECTION: sync
-      SESSION_DRIVER: array
-      TELESCOPE_ENABLED: false
 
     steps:
       - name: Check out repository
