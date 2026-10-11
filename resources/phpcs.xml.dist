@@ -6,6 +6,7 @@
     <description>Shared PHPCS ruleset used across Maarsson projects</description>
     <arg name="colors"/>
     <arg name="extensions" value="php" />
+    <arg name="cache" value=".phpcs.cache" />
     <!-- Show violated rules in report-->
     <arg value="s"/>
 
