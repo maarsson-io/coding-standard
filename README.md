@@ -7,9 +7,6 @@ Centralized custom coding standards that can be applied across my different proj
 [![Tests](https://github.com/maarsson-io/coding-standard/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/maarsson-io/coding-standard/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/maarsson-io/coding-standard)](https://github.com/maarsson-io/coding-standard/blob/master/LICENSE)
 
-> [!NOTE]
-> See also [maarsson/dev-tools](https://github.com/maarsson-io/dev-tools).
-
 ## About
 
 This package holds centrally maintained, opinionated code quality rulesets and applies them to individual projects automatically. The rules are maintained in one place, and every project receives the same version of them whenever its Composer dependencies are installed or updated.
@@ -18,6 +15,7 @@ The rulesets and the CI workflow target Laravel applications.
 
 ### How it works
 
+- **It installs the tools.** The package requires every PHP tool its rulesets need, and adds the frontend tools to the project's `package.json`.
 - **It syncs the rulesets.** A sync script copies the shared configuration files into the project after `composer install` and `composer update`.
 - **It activates local checks.** The synced Git hooks run the checks through [GrumPHP](https://github.com/phpro/grumphp) on every commit and push.
 - **It activates CI checks.** The synced GitHub Actions workflow repeats the checks on the server, because local hooks can be bypassed and CI cannot.
@@ -56,44 +54,21 @@ The hooks block the operation when a check fails. No check applies automatic fix
 - Git
 - For the frontend tools: npm and Node.js `^22.13.0 || >=24`
 
-### Recommended: through the metapackage
-
-The [maarsson/dev-tools](https://github.com/maarsson-io/dev-tools) metapackage installs this package together with every tool the rulesets need. Follow its [installation steps](https://github.com/maarsson-io/dev-tools#installation), then [configure the Composer scripts](#configure-the-composer-scripts) below.
-
-### Manual
-
-Install the package as a development dependency:
-
-```sh
-composer require --dev maarsson/coding-standard
-```
-
-The package ships the rulesets only. Install the tools yourself:
+### Install the package
 
 ```sh
 composer config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 composer config --no-plugins allow-plugins.phpro/grumphp false
-composer require --dev phpmd/phpmd
-composer require --dev squizlabs/php_codesniffer
-composer require --dev slevomat/coding-standard
-composer require --dev friendsofphp/php-cs-fixer
-composer require --dev larastan/larastan
-composer require --dev shipmonk/dead-code-detector:^1.4
-composer require --dev php-parallel-lint/php-parallel-lint:^1.4
-composer require --dev phpro/grumphp:^2.25
-npm install --save-dev eslint@^10 @eslint/js@^10 @stylistic/eslint-plugin@^5 eslint-plugin-vue@^10 globals@^17 typescript@^6 typescript-eslint@^8
-npm install --save-dev stylelint@^17 @stylistic/stylelint-plugin@^5 postcss-html@^2 stylelint-config-standard@^40 stylelint-config-standard-scss@^17 stylelint-config-recommended-vue@^2 stylelint-config-standard-vue@^2 @dreamsicle.io/stylelint-config-tailwindcss@^1.2.2
+composer require --dev maarsson/coding-standard
 ```
 
-The GrumPHP Composer plugin is disabled because the sync script installs and activates the hooks itself. The project must provide PHPUnit and a `phpunit.xml`.
+The package pulls in the PHP tools itself. The two plugin permissions must be set in the project's `composer.json`, because a dependency cannot grant them: the PHPCS installer registers the Slevomat sniffs, and the GrumPHP plugin stays disabled because the sync activates the hooks itself.
 
-The synced CI workflow calls `npm run eslint` and `npm run stylelint`. With a manual installation, add these scripts to `package.json` yourself: `eslint` as `eslint .` and `stylelint` as `stylelint "**/*.{css,scss,vue}"`.
-
-<a id="2-project-configuration-required"></a>
+The project must provide PHPUnit and a `phpunit.xml`.
 
 ### Configure the Composer scripts
 
-Required for both installation methods. Add the sync script to the project's `composer.json` and run it after every install and update:
+Add the sync script to the project's `composer.json` and run it after every install and update:
 
 ```json
 {
@@ -135,23 +110,28 @@ composer coding-standard:sync
 
 Then:
 
-1. Run `npm install` if the sync reported a `package.json` change.
+1. Run `npm install` to install the frontend tools the sync added to `package.json`.
 2. Add `*.cache` and `*.backup*` to `.gitignore`.
-3. Commit the synced files. The CI workflow checks the committed files and does not sync.
+3. Commit the synced files together with `package.json` and `package-lock.json`. The CI workflow checks the committed files and does not sync.
 
 ### Updating
 
 ```sh
-composer update maarsson/coding-standard
+composer update maarsson/coding-standard --with-dependencies
 ```
 
-When the package is installed through `maarsson/dev-tools`, update both:
+The option also moves the tools to the newest versions the package allows. Run `npm install` when the sync reports a `package.json` change, and review the resulting `git diff` before committing; see [Overwrite behavior](#overwrite-behavior).
+
+### Upgrading from 2.x
+
+Version 3 replaces the `maarsson/dev-tools` metapackage: this package now requires the tools itself. In a project that installed the metapackage, swap the two:
 
 ```sh
-composer update maarsson/dev-tools --with-dependencies
+composer remove --dev maarsson/dev-tools --no-update
+composer require --dev maarsson/coding-standard:^3.0 --with-all-dependencies
 ```
 
-Review the resulting `git diff` before committing; see [Overwrite behavior](#overwrite-behavior).
+The plugin permissions and the Composer scripts stay as they are. The frontend tools in `package.json` keep their versions; the first sync only reorders its own record under the `maarsson-coding-standard` key.
 
 ---
 
@@ -176,7 +156,7 @@ The sync runs after `composer install` and `composer update` when development de
 
 ### It updates package.json
 
-This step runs only when `maarsson/dev-tools` is installed. The frontend tool list comes from that package's `extra.frontend-tools` setting.
+The frontend tool list comes from this package's `extra.frontend-tools` setting.
 
 - The tools are added to `devDependencies`.
 - The `eslint`, `eslint:fix`, `stylelint`, and `stylelint:fix` scripts are created.
@@ -213,7 +193,7 @@ The synced workflow assumes a Laravel application tested with `php artisan test`
 
 This package provides a guideline and the `code-quality-checks` skill for Laravel Boost. The skill explains which checks to run, their scope, and how to compare failures in legacy projects.
 
-In a consumer project with Laravel Boost installed, run `php artisan boost:install` and select the `maarsson/coding-standard` package when offered. For an existing Boost setup, use `php artisan boost:update --discover`.
+Run `php artisan boost:install`, or `php artisan boost:update` for an existing Boost setup, and select `maarsson/coding-standard` when it is offered. Boost offers new packages only when run from the terminal, not as a Composer script such as `post-update-cmd`. Once selected, the package stays in `boost.json` and later updates refresh its guideline and skill automatically.
 
 ---
 
@@ -230,7 +210,7 @@ GrumPHP runs its `git_blacklist` task only in the pre-commit context, on the sta
 | A keyword is found | Fails and lists the matches |
 | No keywords are configured | Passes with a notice |
 | No tracked file matches the filters | Passes with a notice |
-| `phpro/grumphp` is not installed, or `grumphp.yml` is missing | Fails, because the check could not run |
+| `grumphp.yml` is missing | Fails, because the check could not run |
 
 ### ESLint and Vue 2
 

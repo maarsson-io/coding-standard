@@ -187,6 +187,8 @@ function resolveDocsPath(array $arguments): string
 }
 
 /**
+ * Reads the frontend tool list from this package's installed Composer metadata.
+ *
  * @return array<string, string>
  */
 function frontendDependencies(string $projectRoot): array
@@ -203,7 +205,7 @@ function frontendDependencies(string $projectRoot): array
     }
 
     foreach ($packages as $package) {
-        if (($package->name ?? null) !== 'maarsson/dev-tools') {
+        if (($package->name ?? null) !== 'maarsson/coding-standard') {
             continue;
         }
 
@@ -212,13 +214,13 @@ function frontendDependencies(string $projectRoot): array
             return [];
         }
         if (! $dependencies instanceof stdClass) {
-            throw new RuntimeException('dev-tools extra.frontend-tools must be an object.');
+            throw new RuntimeException('coding-standard extra.frontend-tools must be an object.');
         }
 
         $result = (array) $dependencies;
         foreach ($result as $name => $version) {
             if (! is_string($name) || ! is_string($version) || trim($version) === '') {
-                throw new RuntimeException('Invalid npm dependency in dev-tools extra.frontend-tools.');
+                throw new RuntimeException('Invalid npm dependency in coding-standard extra.frontend-tools.');
             }
         }
 

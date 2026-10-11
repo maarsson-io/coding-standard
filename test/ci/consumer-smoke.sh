@@ -47,7 +47,14 @@ cat > composer.json <<'JSON'
 JSON
 
 info "Installing dependencies…"
+composer config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+composer config --no-plugins allow-plugins.phpro/grumphp false
 composer install --no-interaction --prefer-dist
+
+info "Asserting the tool binaries are installed…"
+for binary in phpcs phpcbf php-cs-fixer phpmd phpstan parallel-lint grumphp; do
+  test -x "./vendor/bin/$binary" || fail "$binary binary missing"
+done
 
 info "Running sync script…"
 ./vendor/bin/sync-coding-standards.php
@@ -68,12 +75,10 @@ for hook in pre-commit commit-msg pre-push; do
   cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook mismatch error"
 done
 
-info "Asserting the debug statement check is installed and requires GrumPHP…"
-test -x vendor/bin/check-debug-statements.php || fail "check-debug-statements.php was not installed as executable"
-if ./vendor/bin/check-debug-statements.php > "$WORKDIR/debug-check.log" 2>&1; then
-  fail "Debug statement check should fail without GrumPHP"
-fi
-grep -Fq 'phpro/grumphp must be installed' "$WORKDIR/debug-check.log" || fail "Missing GrumPHP was not reported"
+info "Asserting the frontend tools are added to package.json…"
+test -f package.json || fail "package.json was not created"
+grep -Fq '"eslint": "eslint ."' package.json || fail "ESLint script was not added to package.json"
+grep -Fq '"stylelint": "^' package.json || fail "Stylelint dependency was not added to package.json"
 
 info "Asserting files match package dist versions…"
 cmp -s phpmd.yml ./vendor/maarsson/coding-standard/resources/phpmd.yml.dist || fail "phpmd.yml mismatch error"
@@ -103,6 +108,20 @@ test "$(git config --local core.hooksPath)" = .githooks || fail "Git hooks were 
 for file in $MANAGED_FILES; do
   cmp -s "$file" "$file.backup" || fail "$file backup does not match the existing file"
 done
+
+info "Asserting the debug statement check runs with the installed GrumPHP…"
+test -x vendor/bin/check-debug-statements.php || fail "check-debug-statements.php was not installed as executable"
+printf "export const value = 1;\n" > clean.js
+git add clean.js
+./vendor/bin/check-debug-statements.php || fail "Debug statement check failed for clean files"
+printf "console.log('debug');\n" > debug.js
+git add debug.js
+if ./vendor/bin/check-debug-statements.php > "$WORKDIR/debug-check.log" 2>&1; then
+  fail "Debug statement check should fail for a tracked debug statement"
+fi
+grep -Fq 'debug.js' "$WORKDIR/debug-check.log" || fail "Debug statement was not reported"
+git rm -q --cached clean.js debug.js
+rm clean.js debug.js
 
 info "Asserting always-overwrite behavior…"
 echo "local change" >> phpmd.yml
