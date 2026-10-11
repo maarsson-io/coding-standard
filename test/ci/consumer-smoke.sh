@@ -47,7 +47,14 @@ cat > composer.json <<'JSON'
 JSON
 
 info "Installing dependencies…"
+composer config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+composer config --no-plugins allow-plugins.phpro/grumphp false
 composer install --no-interaction --prefer-dist
+
+info "Asserting the tool binaries are installed…"
+for binary in phpcs phpcbf php-cs-fixer phpmd phpstan parallel-lint grumphp; do
+  test -x "./vendor/bin/$binary" || fail "$binary binary missing"
+done
 
 info "Running sync script…"
 ./vendor/bin/sync-coding-standards.php
@@ -62,17 +69,16 @@ test -f eslint.config.mjs || fail "eslint.config.mjs was not copied to project r
 test -f stylelint.config.mjs || fail "stylelint.config.mjs was not copied to project root"
 test -f grumphp.yml || fail "grumphp.yml was not copied to project root"
 test -f .github/workflows/ci.yml || fail "CI workflow was not copied to .github/workflows"
+test -f docs/CODE_QUALITY.md || fail "CODE_QUALITY.md was not copied to docs"
 for hook in pre-commit commit-msg pre-push; do
   test -x ".githooks/$hook" || fail "$hook was not installed as executable"
   cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook mismatch error"
 done
 
-info "Asserting the debug statement check is installed and requires GrumPHP…"
-test -x vendor/bin/check-debug-statements.php || fail "check-debug-statements.php was not installed as executable"
-if ./vendor/bin/check-debug-statements.php > "$WORKDIR/debug-check.log" 2>&1; then
-  fail "Debug statement check should fail without GrumPHP"
-fi
-grep -Fq 'phpro/grumphp must be installed' "$WORKDIR/debug-check.log" || fail "Missing GrumPHP was not reported"
+info "Asserting the frontend tools are added to package.json…"
+test -f package.json || fail "package.json was not created"
+grep -Fq '"eslint": "eslint ."' package.json || fail "ESLint script was not added to package.json"
+grep -Fq '"stylelint": "^' package.json || fail "Stylelint dependency was not added to package.json"
 
 info "Asserting files match package dist versions…"
 cmp -s phpmd.yml ./vendor/maarsson/coding-standard/resources/phpmd.yml.dist || fail "phpmd.yml mismatch error"
@@ -87,8 +93,9 @@ cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.conf
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs mismatch error"
 
 cmp -s .github/workflows/ci.yml ./vendor/maarsson/coding-standard/resources/ci.yml.dist || fail "CI workflow mismatch error"
+cmp -s docs/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md mismatch error"
 
-MANAGED_FILES="phpmd.yml .phpcs.xml .php-cs-fixer.php phpstan.neon grumphp.yml eslint.config.mjs stylelint.config.mjs .github/workflows/ci.yml .githooks/pre-commit .githooks/commit-msg .githooks/pre-push"
+MANAGED_FILES="phpmd.yml .phpcs.xml .php-cs-fixer.php phpstan.neon grumphp.yml eslint.config.mjs stylelint.config.mjs .github/workflows/ci.yml docs/CODE_QUALITY.md .githooks/pre-commit .githooks/commit-msg .githooks/pre-push"
 for file in $MANAGED_FILES; do
   test ! -e "$file.backup" || fail "$file backup should not exist after first sync"
 done
@@ -102,6 +109,20 @@ for file in $MANAGED_FILES; do
   cmp -s "$file" "$file.backup" || fail "$file backup does not match the existing file"
 done
 
+info "Asserting the debug statement check runs with the installed GrumPHP…"
+test -x vendor/bin/check-debug-statements.php || fail "check-debug-statements.php was not installed as executable"
+printf "export const value = 1;\n" > clean.js
+git add clean.js
+./vendor/bin/check-debug-statements.php || fail "Debug statement check failed for clean files"
+printf "console.log('debug');\n" > debug.js
+git add debug.js
+if ./vendor/bin/check-debug-statements.php > "$WORKDIR/debug-check.log" 2>&1; then
+  fail "Debug statement check should fail for a tracked debug statement"
+fi
+grep -Fq 'debug.js' "$WORKDIR/debug-check.log" || fail "Debug statement was not reported"
+git rm -q --cached clean.js debug.js
+rm clean.js debug.js
+
 info "Asserting always-overwrite behavior…"
 echo "local change" >> phpmd.yml
 echo "local change" >> .phpcs.xml
@@ -111,6 +132,7 @@ echo "local change" >> grumphp.yml
 echo "local change" >> eslint.config.mjs
 echo "local change" >> stylelint.config.mjs
 echo "# local workflow change" >> .github/workflows/ci.yml
+echo "local change" >> docs/CODE_QUALITY.md
 for hook in pre-commit commit-msg pre-push; do
   echo "local change" >> ".githooks/$hook"
   chmod -x ".githooks/$hook"
@@ -142,6 +164,7 @@ cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.conf
 
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs overwrite error"
 cmp -s .github/workflows/ci.yml ./vendor/maarsson/coding-standard/resources/ci.yml.dist || fail "CI workflow overwrite error"
+cmp -s docs/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md overwrite error"
 
 info "Asserting repeated sync preserves earlier backups…"
 ./vendor/bin/sync-coding-standards.php
@@ -150,6 +173,19 @@ for file in $MANAGED_FILES; do
   cmp -s "$file.backup.1" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file local backup was overwritten"
 done
 rm -rf "$CONSUMER/expected-backups"
+
+info "Asserting the documentation path option…"
+./vendor/bin/sync-coding-standards.php --docs-path=docs/development
+cmp -s docs/development/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md was not copied to the configured path"
+./vendor/bin/sync-coding-standards.php --docs_path=handbook/
+cmp -s handbook/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md was not copied to the underscore option path"
+for invalid in ../outside /tmp/outside docs/../outside ""; do
+  if ./vendor/bin/sync-coding-standards.php "--docs-path=$invalid" > "$CONSUMER/docs-path-failure.log" 2>&1; then
+    fail "Sync should reject the documentation path '$invalid'"
+  fi
+  grep -Fq 'Invalid --docs-path value' "$CONSUMER/docs-path-failure.log" || fail "Invalid documentation path was not reported"
+done
+test ! -e ../outside/CODE_QUALITY.md || fail "CODE_QUALITY.md was written outside the project"
 
 info "Asserting backup failure prevents overwrite…"
 rm phpmd.yml

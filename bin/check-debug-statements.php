@@ -24,11 +24,6 @@ $projectRoot = getcwd(); // when executed from app, this is app root
 
 require $_composer_autoload_path ?? $projectRoot . '/vendor/autoload.php';
 
-if (! class_exists(FilesCollection::class)) {
-    fwrite(STDOUT, '::error::phpro/grumphp must be installed to run the debug statement check.' . PHP_EOL);
-    exit(1);
-}
-
 $config = Yaml::parseFile($projectRoot . '/grumphp.yml');
 $options = ($config['grumphp']['tasks']['git_blacklist'] ?? []) + [
     'keywords' => [],

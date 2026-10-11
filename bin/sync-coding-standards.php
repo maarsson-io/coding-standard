@@ -23,6 +23,12 @@ const FILES_TO_SYNC = [
     'resources/githooks/pre-push' => '.githooks/pre-push',
 ];
 
+/**
+ * Developer documentation copied into the configurable documentation directory.
+ */
+const DOCS_FILE = 'CODE_QUALITY.md';
+const DEFAULT_DOCS_PATH = 'docs';
+
 const CLI_COLORS = [
     'green' => "\033[32m",
     'red' => "\033[31m",
@@ -37,13 +43,16 @@ $errorsCount = 0;
 fwrite(STDOUT, '[' . CLI_COLORS['blue'] . 'INFO' . CLI_COLORS['reset'] . '] Syncing coding standard rulesets…' . PHP_EOL);
 
 try {
+    $docsPath = resolveDocsPath($argv ?? []);
     $frontendPackage = prepareFrontendPackage($projectRoot);
 } catch (RuntimeException | JsonException $exception) {
     fwrite(STDERR, '[FAIL] ' . $exception->getMessage() . PHP_EOL);
     exit(1);
 }
 
-foreach (FILES_TO_SYNC as $source => $target) {
+$filesToSync = FILES_TO_SYNC + ['resources/docs/' . DOCS_FILE => $docsPath . '/' . DOCS_FILE];
+
+foreach ($filesToSync as $source => $target) {
     $sourcePath = $vendorRoot . $source;
     $targetPath = $projectRoot . '/' . $target;
 
@@ -153,6 +162,33 @@ function runGitCommand(array $arguments): array
 }
 
 /**
+ * Reads the documentation directory from the --docs-path option.
+ *
+ * @param list<string> $arguments
+ */
+function resolveDocsPath(array $arguments): string
+{
+    $path = DEFAULT_DOCS_PATH;
+    foreach ($arguments as $argument) {
+        if (preg_match('/^--docs[-_]path=(.*)$/', (string) $argument, $matches) === 1) {
+            $path = $matches[1];
+        }
+    }
+
+    $path = rtrim(str_replace('\\', '/', $path), '/');
+    $segments = explode('/', $path);
+    $isAbsolute = str_starts_with($path, '/') || preg_match('/^[A-Za-z]:/', $path) === 1;
+
+    if ($path === '' || $isAbsolute || in_array('..', $segments, true) || in_array('.', $segments, true) || in_array('', $segments, true)) {
+        throw new RuntimeException('Invalid --docs-path value; use a directory relative to the project root, such as docs/development.');
+    }
+
+    return $path;
+}
+
+/**
+ * Reads the frontend tool list from this package's installed Composer metadata.
+ *
  * @return array<string, string>
  */
 function frontendDependencies(string $projectRoot): array
@@ -169,7 +205,7 @@ function frontendDependencies(string $projectRoot): array
     }
 
     foreach ($packages as $package) {
-        if (($package->name ?? null) !== 'maarsson/dev-tools') {
+        if (($package->name ?? null) !== 'maarsson/coding-standard') {
             continue;
         }
 
@@ -178,13 +214,13 @@ function frontendDependencies(string $projectRoot): array
             return [];
         }
         if (! $dependencies instanceof stdClass) {
-            throw new RuntimeException('dev-tools extra.frontend-tools must be an object.');
+            throw new RuntimeException('coding-standard extra.frontend-tools must be an object.');
         }
 
         $result = (array) $dependencies;
         foreach ($result as $name => $version) {
             if (! is_string($name) || ! is_string($version) || trim($version) === '') {
-                throw new RuntimeException('Invalid npm dependency in dev-tools extra.frontend-tools.');
+                throw new RuntimeException('Invalid npm dependency in coding-standard extra.frontend-tools.');
             }
         }
 

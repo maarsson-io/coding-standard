@@ -7,65 +7,68 @@ Centralized custom coding standards that can be applied across my different proj
 [![Tests](https://github.com/maarsson-io/coding-standard/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/maarsson-io/coding-standard/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/maarsson-io/coding-standard)](https://github.com/maarsson-io/coding-standard/blob/master/LICENSE)
 
-> [!NOTE]
-> See also [maarsson/dev-tools](https://github.com/maarsson-io/dev-tools).
-
 ## About
 
-This package provides shared code quality rulesets and a sync script that applies them to consumer projects in a predictable and consistent way.
+This package holds centrally maintained, opinionated code quality rulesets and applies them to individual projects automatically. The rules are maintained in one place, and every project receives the same version of them whenever its Composer dependencies are installed or updated.
 
-By following the installation steps below, the rulesets are automatically applied after composer install and composer update in your project. This guarantees that all projects use the exact same ruleset versions.
+The rulesets and the CI workflow target Laravel applications.
 
-Currently supported:
-- [PHP Mess Detector (PHPMD)](https://phpmd.org/) - detect design and complexity issues
-- [PHP CodeSniffer (PHPCS)](https://github.com/PHPCSStandards/PHP_CodeSniffer/) - detect coding standard violations
-- [PHP CS Fixer](https://cs.symfony.com/) - automatically enforce modern code style
-- [Larastan](https://github.com/larastan/larastan) - catches both obvious & tricky bugs
-- [GrumPHP](https://github.com/phpro/grumphp) - runs quality checks through Git hooks
-- [ESLint](https://eslint.org/) - statically analyzes JavaScript, TypeScript, and Vue files, including stylistic rules
-- [Stylelint](https://stylelint.io/) - CSS linter to avoid errors and enforce conventions
+### How it works
 
----
+- **It installs the tools.** The package requires every PHP tool its rulesets need, and adds the frontend tools to the project's `package.json`.
+- **It syncs the rulesets.** A sync script copies the shared configuration files into the project after `composer install` and `composer update`.
+- **It activates local checks.** The synced Git hooks run the checks through [GrumPHP](https://github.com/phpro/grumphp) on every commit and push.
+- **It activates CI checks.** The synced GitHub Actions workflow repeats the checks on the server, because local hooks can be bypassed and CI cannot.
+- **It documents the workflow.** A synced [code quality guide](resources/docs/CODE_QUALITY.md) tells the project's developers what runs when, what to do when a check fails, and which conventions apply.
 
-## Requirements
+### Included checks
 
-- PHP `>=8.4 <8.6`
-- Composer
-- For the frontend tools: npm and Node.js `^22.13.0 || >=24`
+| Check | Tool | Commit | Push | CI |
+| --- | --- | :-: | :-: | :-: |
+| PHP syntax | [PHP Parallel Lint](https://github.com/php-parallel-lint/PHP-Parallel-Lint) | ✓ | | ✓ |
+| Supported PHP version | GrumPHP | ✓ | | |
+| Composer configuration | Composer | ✓ | | ✓ |
+| Composer autoloading | Composer | | ✓ | ✓ |
+| JSON, XML, and YAML syntax | GrumPHP | ✓ | | ✓ |
+| Coding standard | [PHP CodeSniffer (PHPCS)](https://github.com/PHPCSStandards/PHP_CodeSniffer/) with the [Slevomat](https://github.com/slevomat/coding-standard/) sniffs | ✓ | | ✓ |
+| Code style | [PHP CS Fixer](https://cs.symfony.com/), check only | ✓ | | ✓ |
+| JavaScript, TypeScript, and Vue | [ESLint](https://eslint.org/) | ✓ | | ✓ |
+| CSS, SCSS, and Vue styles | [Stylelint](https://stylelint.io/) | ✓ | | ✓ |
+| Debug statements and development markers | GrumPHP | ✓ | | ✓ |
+| Protected branch names | GrumPHP | ✓ | | |
+| Commit message format | GrumPHP | ✓ | | |
+| Static analysis and dead code | [PHPStan](https://phpstan.org/) with [Larastan](https://github.com/larastan/larastan) and the [dead code detector](https://github.com/shipmonk-rnd/dead-code-detector) | | ✓ | ✓ |
+| Design and complexity | [PHP Mess Detector (PHPMD)](https://phpmd.org/) | | ✓ | ✓ |
+| Tests | PHPUnit | | ✓ | ✓ |
+
+The hooks block the operation when a check fails. No check applies automatic fixes.
 
 ---
 
 ## Installation
 
-### 1. Package installation
+### Requirements
 
-Install the package as a development dependency in your project:
+- PHP `>=8.4 <8.6`
+- Composer
+- Git
+- For the frontend tools: npm and Node.js `^22.13.0 || >=24`
 
-`composer require --dev maarsson/coding-standard`
+### Install the package
 
----
-
-### 2. Project configuration (required)
-
-To ensure the coding standards are applied automatically, you must configure Composer scripts in the target project.
-
-#### 2.1. Add a named sync script
-
-In your project’s `composer.json` add:
-
-```json
-{
-  "scripts": {
-    "coding-standard:sync": [
-      "@php -r \"if (getenv('COMPOSER_DEV_MODE') !== '0') { require 'vendor/bin/sync-coding-standards.php'; }\""
-    ]
-  }
-}
+```sh
+composer config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+composer config --no-plugins allow-plugins.phpro/grumphp false
+composer require --dev maarsson/coding-standard
 ```
 
-#### 2.2. Run the sync script on install and update
+The package pulls in the PHP tools itself. The two plugin permissions must be set in the project's `composer.json`, because a dependency cannot grant them: the PHPCS installer registers the Slevomat sniffs, and the GrumPHP plugin stays disabled because the sync activates the hooks itself.
 
-Extend your project’s `composer.json` scripts section to include:
+The project must provide PHPUnit and a `phpunit.xml`.
+
+### Configure the Composer scripts
+
+Add the sync script to the project's `composer.json` and run it after every install and update:
 
 ```json
 {
@@ -83,64 +86,106 @@ Extend your project’s `composer.json` scripts section to include:
 }
 ```
 
-With this setup, the coding standards are applied automatically for development installs and updates.
-
-Composer sets `COMPOSER_DEV_MODE=0` when `install` or `update` runs with `--no-dev`. The conditional hook skips synchronization in that mode because this development dependency and its sync executable are not installed. This prevents production deployments from failing with `vendor/bin/sync-coding-standards.php: not found`. Development installs still run the sync script and propagate any failure.
+Composer sets `COMPOSER_DEV_MODE=0` when `install` or `update` runs with `--no-dev`. The condition skips the sync in that mode, because this development dependency and its executable are not installed. This prevents production deployments from failing with `vendor/bin/sync-coding-standards.php: not found`. Development installs still run the sync and propagate any failure.
 
 See [Composer script environment variables](https://getcomposer.org/doc/articles/scripts.md#defining-scripts) for details.
 
+#### Documentation path
+
+The sync copies the code quality guide to `docs/CODE_QUALITY.md`. To place it elsewhere, append the `--docs-path` option to the script, after a `--` separator:
+
+```json
+"coding-standard:sync": [
+  "@php -r \"if (getenv('COMPOSER_DEV_MODE') !== '0') { require 'vendor/bin/sync-coding-standards.php'; }\" -- --docs-path=docs/development"
+]
+```
+
+The guide is then written to `docs/development/CODE_QUALITY.md`. Set the option in the script definition, not on the command line, so that automatic and manual syncs use the same location. The path must be relative to the project root. Changing it later leaves the previous copy in place; delete that file yourself.
+
+### Run the first sync
+
+```sh
+composer coding-standard:sync
+```
+
+Then:
+
+1. Run `npm install` to install the frontend tools the sync added to `package.json`.
+2. Add `*.cache` and `*.backup*` to `.gitignore`.
+3. Commit the synced files together with `package.json` and `package-lock.json`. The CI workflow checks the committed files and does not sync.
+
+### Updating
+
+```sh
+composer update maarsson/coding-standard --with-dependencies
+```
+
+The option also moves the tools to the newest versions the package allows. Run `npm install` when the sync reports a `package.json` change, and review the resulting `git diff` before committing; see [Overwrite behavior](#overwrite-behavior).
+
+### Upgrading from 2.x
+
+Version 3 replaces the `maarsson/dev-tools` metapackage: this package now requires the tools itself. In a project that installed the metapackage, swap the two:
+
+```sh
+composer remove --dev maarsson/dev-tools --no-update
+composer require --dev maarsson/coding-standard:^3.0 --with-all-dependencies
+```
+
+The plugin permissions and the Composer scripts stay as they are. The frontend tools in `package.json` keep their versions; the first sync only reorders its own record under the `maarsson-coding-standard` key.
+
 ---
 
-## When does it apply?
+## What the sync command does
 
-Once configured, the sync script runs automatically in the following cases:
+The sync runs after `composer install` and `composer update` when development dependencies are installed and Composer scripts are enabled. Run it manually at any time with `composer coding-standard:sync`, or directly with `./vendor/bin/sync-coding-standards.php` from the project root.
 
-Automatic execution:
-- After `composer install` with development dependencies
-- After `composer update` with development dependencies
-- During CI pipelines that run either command with development dependencies
+### It copies the shared files
 
-Manual execution:
+| File | Purpose |
+| --- | --- |
+| `phpmd.yml` | PHPMD ruleset |
+| `.phpcs.xml` | PHPCS ruleset |
+| `.php-cs-fixer.php` | PHP CS Fixer configuration |
+| `phpstan.neon` | PHPStan configuration |
+| `grumphp.yml` | GrumPHP tasks and test suites |
+| `eslint.config.mjs` | ESLint configuration |
+| `stylelint.config.mjs` | Stylelint configuration |
+| `.github/workflows/ci.yml` | GitHub Actions workflow |
+| `docs/CODE_QUALITY.md` | Code quality guide for the project's developers; see [Documentation path](#documentation-path) |
+| `.githooks/pre-commit`, `.githooks/commit-msg`, `.githooks/pre-push` | Git hooks |
 
-- You can also apply the coding standards manually at any time:
+### It updates package.json
 
-    `composer coding-standard:sync` (preferred)
+The frontend tool list comes from this package's `extra.frontend-tools` setting.
 
-    or:
+- The tools are added to `devDependencies`.
+- The `eslint`, `eslint:fix`, `stylelint`, and `stylelint:fix` scripts are created.
+- The managed entries are recorded under the `maarsson-coding-standard` key, so a later sync can update or remove them.
 
-    `./vendor/bin/sync-coding-standards.php` (direct execution)
+The sync does not install npm packages. It prints a reminder when `package.json` changed; run `npm install` and commit `package.json` together with `package-lock.json`.
 
----
+The sync stops with an error, before copying any file, in two cases: a managed tool is listed under `dependencies`, or a managed entry already exists in `package.json` with a different value that an earlier sync did not write.
 
-## What does the sync script do?
+### It activates the Git hooks
 
-The sync script copies shared ruleset files from the package into the project root.
-
-Currently applied files:
-- `phpmd.yml`
-- `.phpcs.xml`
-- `.php-cs-fixer.php`
-- `phpstan.neon`
-- `grumphp.yml`
-- `eslint.config.mjs`
-- `stylelint.config.mjs`
-- `.github/workflows/ci.yml`
-- `.githooks/pre-commit`
-- `.githooks/commit-msg`
-- `.githooks/pre-push`
-
-When run from a Git repository root, the sync script makes the hooks executable and sets the local `core.hooksPath` to `.githooks`. Linked worktrees are supported. Without a Git repository, the files are still copied and activation is skipped.
+When run from the root of a Git repository, the sync makes the hooks executable and sets the local `core.hooksPath` to `.githooks`. Linked worktrees are supported. Outside a repository root the files are still copied and the activation is skipped.
 
 ### Overwrite behavior
 
-The sync process uses an always overwrite strategy:
+The sync always overwrites the copied files. This is intentional: it guarantees that every project uses the same rules.
 
-- Existing shared rulesets, `grumphp.yml`, and the three managed hook files are replaced
-- Before replacing an existing file, its current contents are saved alongside it as `<filename>.backup`, even if they match the shared version.
+- Before a file is replaced, its current contents are saved next to it as `<filename>.backup`, then `<filename>.backup.1`, `<filename>.backup.2`, and so on. A backup is created on every sync, even when the file did not change.
 - If a backup cannot be created, that file is not overwritten and the sync exits with an error.
-- This guarantees all projects use the exact same ruleset
 
-This behavior is intentional and ensures consistency across projects. If you need to customize rules per project, fork this repository or manage overrides outside of this package.
+Project-specific adjustments are not supported by the package. When a project needs one, such as an extra CI job or the Vue 2 ESLint ruleset, keep it in version control: after a sync, review the `git diff`, commit what the package changed, and restore the project-specific parts.
+
+### The CI workflow
+
+The synced workflow assumes a Laravel application tested with `php artisan test` on an in-memory SQLite database.
+
+- It reports the checks `CI Tests`, `CI Test PHP 8.4`, and `CI Test PHP 8.5`. Use these names for required status checks.
+- It installs Composer dependencies without scripts, so it verifies the committed rulesets and never syncs.
+- Its actions are pinned to commit SHAs. A repository that restricts allowed actions must permit them.
 
 ---
 
@@ -148,136 +193,51 @@ This behavior is intentional and ensures consistency across projects. If you nee
 
 This package provides a guideline and the `code-quality-checks` skill for Laravel Boost. The skill explains which checks to run, their scope, and how to compare failures in legacy projects.
 
-In a consumer project with Laravel Boost installed, run `php artisan boost:install` and select the `maarsson/coding-standard` package when offered. For an existing Boost setup, use `php artisan boost:update --discover`.
+Run `php artisan boost:install`, or `php artisan boost:update` for an existing Boost setup, and select `maarsson/coding-standard` when it is offered. Boost offers new packages only when run from the terminal, not as a Composer script such as `post-update-cmd`. Once selected, the package stays in `boost.json` and later updates refresh its guideline and skill automatically.
 
 ---
 
-## Usage
+## Developer guide
 
-After the sync script runs, the ruleset files will exist in your project root, but the corresponding tools must also be installed. However if you installed the package via `maarsson/dev-tools` you don’t need to install these manually. Otherwise run:
+The checks, the conventions, the manual commands, and the steps to take when a check fails are described in the [code quality guide](resources/docs/CODE_QUALITY.md). The sync copies it into every project, so the developers of a project read the version that matches their installed rules.
 
-```sh
-composer require --dev phpmd/phpmd
-composer require --dev squizlabs/php_codesniffer
-composer require --dev friendsofphp/php-cs-fixer
-composer require --dev larastan/larastan
-composer require --dev shipmonk/dead-code-detector:^1.4
-composer require --dev php-parallel-lint/php-parallel-lint:^1.4
-composer config allow-plugins.phpro/grumphp false
-composer require --dev phpro/grumphp:^2.25
-npm install --save-dev eslint@^10 @eslint/js@^10 @stylistic/eslint-plugin@^5 eslint-plugin-vue@^10 globals@^17 typescript@^6 typescript-eslint@^8
-npm install --save-dev stylelint@^17 @stylistic/stylelint-plugin@^5 postcss-html@^2 stylelint-config-standard@^40 stylelint-config-standard-scss@^17 stylelint-config-recommended-vue@^2 stylelint-config-standard-vue@^2 @dreamsicle.io/stylelint-config-tailwindcss@^1.2.2
-```
+### The debug statement script
 
-Note: `*.cache` should be added to `.gitignore`.
-
-### Using GrumPHP and Git hooks
-
-Set `config.allow-plugins.phpro/grumphp` to `false` in the consumer's `composer.json` before installing the toolchain. This package's sync script installs and activates the shared hooks, so GrumPHP's automatic hook installation is disabled.
-
-| Hook | Checks |
-| --- | --- |
-| `pre-commit` | PHP lint and version, Composer validation, JSON/XML/YAML, PHPCS, PHP-CS-Fixer, ESLint, Stylelint, debug statements, branch name |
-| `commit-msg` | Conventional Commit format |
-| `pre-push` | PHPStan with Larastan and dead code detection, PHPMD, PHPUnit, Composer autoload validation |
-
-The hooks block the operation when a check fails and do not apply automatic fixes. Direct commits to `develop`, `staging`, and `master` are rejected; the branch task also rejects `staging/*`.
-
-The consumer project must provide PHPUnit and `phpunit.xml`. Run the pre-push checks manually with:
-
-`./vendor/bin/grumphp run --testsuite=git_pre_push`
-
-### Checking debug statements outside the pre-commit hook
-
-GrumPHP runs its `git_blacklist` task only in the pre-commit context, on the staged files; `grumphp run` skips it. To apply the same check to every tracked file, for example in CI, run from the project root:
-
-`./vendor/bin/check-debug-statements.php`
-
-The script reads the `git_blacklist` options from `grumphp.yml` and selects files with GrumPHP's own filters, so it follows the hook's keywords, extensions, and whitelist and ignore patterns. The shared CI workflow uses it for its debug statement step.
+GrumPHP runs its `git_blacklist` task only in the pre-commit context, on the staged files. `./vendor/bin/check-debug-statements.php` applies the same check to every tracked file, and the CI workflow uses it. It reads the `git_blacklist` options from `grumphp.yml` and selects files with GrumPHP's own filters, so it follows the hook's keywords, extensions, and whitelist and ignore patterns.
 
 | Situation | Result |
 | --- | --- |
 | A keyword is found | Fails and lists the matches |
 | No keywords are configured | Passes with a notice |
 | No tracked file matches the filters | Passes with a notice |
-| `phpro/grumphp` is not installed, or `grumphp.yml` is missing | Fails, because the check could not run |
+| `grumphp.yml` is missing | Fails, because the check could not run |
 
-### Using PHPMD with the installed ruleset
+### ESLint and Vue 2
 
-Run the PHPMD check for displaying violations like this:
-
-`./vendor/bin/phpmd analyze . --format=ansi --ruleset=phpmd.yml --suffixes=php --cache --cache-file=.phpmd.cache`
-
-### Using PHPCS with the installed ruleset
-
-Run the PHPCS check for displaying violations like this:
-
-`./vendor/bin/phpcs --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
-
-Or run the PHPCBF (comes with the same package) to actually fix violations like this:
-
-`./vendor/bin/phpcbf --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .`
-
-### Using PHP-CS-Fixer with the installed ruleset
-
-Run the PHP-CS-Fixer check for displaying violations like this:
-
-`./vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.php --cache-file=.php-cs-fixer.cache`
-
-Or run the PHP-CS-Fixer to actually fix violations like this:
-
-`./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --cache-file=.php-cs-fixer.cache`
-
-### Using PHPStan with Larastan and dead code detection
-
-Run PHPStan to check for bugs and unused methods, constants, enum cases, and properties:
-
-`./vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=1G --no-progress`
-
-Analyse the complete configured codebase so that dead code detection includes references across files and tests.
-
-
-### Using ESLint with the installed ruleset
-
-The shared configuration uses `vue.configs['flat/recommended']`, which targets Vue 3. For Vue 2 projects, replace it in `eslint.config.mjs` with:
+The shared configuration uses `vue.configs['flat/recommended']`, which targets Vue 3. For a Vue 2 project, replace it in `eslint.config.mjs` with:
 
 ```js
 vue.configs['flat/vue2-recommended']
 ```
 
-Select the ruleset that matches the installed Vue major version before running `--fix`. Vue 3 rules can apply incompatible fixes to Vue 2 code, such as renaming `beforeDestroy` to `beforeUnmount`; the renamed hook will not run in Vue 2.
-
-The sync script overwrites `eslint.config.mjs`, so this Vue 2 adjustment must be preserved separately and reapplied after syncing.
-
-Run static analysis on JS/TS/Vue code to quickly find problems and code styling issues:
-
-`npx eslint .`
-
-Or auto-fix the fixable violations:
-
-`npx eslint . --fix`
-
-### Using Stylelint with the installed ruleset
-
-Check CSS, SCSS, and Vue styles:
-
-`npx stylelint "**/*.{css,scss,vue}"`
-
-Or auto-fix the fixable violations:
-
-`npx stylelint "**/*.{css,scss,vue}" --fix`
+Select the ruleset that matches the installed Vue major version before running `--fix`. Vue 3 rules can apply incompatible fixes to Vue 2 code, such as renaming `beforeDestroy` to `beforeUnmount`; the renamed hook will not run in Vue 2. The sync overwrites `eslint.config.mjs`, so restore this adjustment after each sync.
 
 ---
 
 ## Troubleshooting
 
+***My local changes were overwritten***
+
+This is the intended [overwrite behavior](#overwrite-behavior). Restore the project-specific parts from version control or from the `.backup` file created next to the overwritten file.
+
+***Conflicting package.json entry / Frontend tool already exists in dependencies***
+
+The sync manages the frontend tools in `devDependencies` and four npm scripts. Move the named tool from `dependencies` to `devDependencies`, or remove the project's own version of the named entry, then sync again.
+
 ***Source file not found***
 
-This typically means:
-- the package is not installed correctly
-- Composer install/update did not complete successfully
+The package is not installed correctly, or Composer install/update did not complete. Try:
 
-Try:
 ```sh
 composer install
 composer coding-standard:sync -vvv
@@ -285,7 +245,7 @@ composer coding-standard:sync -vvv
 
 ***Sync script not executable***
 
-Ensure your environment supports running scripts from vendor/bin and that file permissions are preserved.
+Ensure your environment supports running scripts from `vendor/bin` and that file permissions are preserved.
 
 ---
 

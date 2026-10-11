@@ -18,7 +18,7 @@ $writeJson = static function (string $path, mixed $value) use ($filesystem): voi
 };
 $metadata = static function (array $dependencies) use ($writeJson, $installedPath): void {
     $writeJson($installedPath, ['packages' => [[
-        'name' => 'maarsson/dev-tools',
+        'name' => 'maarsson/coding-standard',
         'extra' => ['frontend-tools' => (object) $dependencies],
     ]]]);
 };
