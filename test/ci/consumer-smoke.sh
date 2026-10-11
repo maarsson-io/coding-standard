@@ -62,6 +62,7 @@ test -f eslint.config.mjs || fail "eslint.config.mjs was not copied to project r
 test -f stylelint.config.mjs || fail "stylelint.config.mjs was not copied to project root"
 test -f grumphp.yml || fail "grumphp.yml was not copied to project root"
 test -f .github/workflows/ci.yml || fail "CI workflow was not copied to .github/workflows"
+test -f docs/CODE_QUALITY.md || fail "CODE_QUALITY.md was not copied to docs"
 for hook in pre-commit commit-msg pre-push; do
   test -x ".githooks/$hook" || fail "$hook was not installed as executable"
   cmp -s ".githooks/$hook" "./vendor/maarsson/coding-standard/resources/githooks/$hook" || fail "$hook mismatch error"
@@ -87,8 +88,9 @@ cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.conf
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs mismatch error"
 
 cmp -s .github/workflows/ci.yml ./vendor/maarsson/coding-standard/resources/ci.yml.dist || fail "CI workflow mismatch error"
+cmp -s docs/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md mismatch error"
 
-MANAGED_FILES="phpmd.yml .phpcs.xml .php-cs-fixer.php phpstan.neon grumphp.yml eslint.config.mjs stylelint.config.mjs .github/workflows/ci.yml .githooks/pre-commit .githooks/commit-msg .githooks/pre-push"
+MANAGED_FILES="phpmd.yml .phpcs.xml .php-cs-fixer.php phpstan.neon grumphp.yml eslint.config.mjs stylelint.config.mjs .github/workflows/ci.yml docs/CODE_QUALITY.md .githooks/pre-commit .githooks/commit-msg .githooks/pre-push"
 for file in $MANAGED_FILES; do
   test ! -e "$file.backup" || fail "$file backup should not exist after first sync"
 done
@@ -111,6 +113,7 @@ echo "local change" >> grumphp.yml
 echo "local change" >> eslint.config.mjs
 echo "local change" >> stylelint.config.mjs
 echo "# local workflow change" >> .github/workflows/ci.yml
+echo "local change" >> docs/CODE_QUALITY.md
 for hook in pre-commit commit-msg pre-push; do
   echo "local change" >> ".githooks/$hook"
   chmod -x ".githooks/$hook"
@@ -142,6 +145,7 @@ cmp -s eslint.config.mjs ./vendor/maarsson/coding-standard/resources/eslint.conf
 
 cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelint.config.mjs.dist || fail "stylelint.config.mjs overwrite error"
 cmp -s .github/workflows/ci.yml ./vendor/maarsson/coding-standard/resources/ci.yml.dist || fail "CI workflow overwrite error"
+cmp -s docs/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md overwrite error"
 
 info "Asserting repeated sync preserves earlier backups…"
 ./vendor/bin/sync-coding-standards.php
@@ -150,6 +154,19 @@ for file in $MANAGED_FILES; do
   cmp -s "$file.backup.1" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file local backup was overwritten"
 done
 rm -rf "$CONSUMER/expected-backups"
+
+info "Asserting the documentation path option…"
+./vendor/bin/sync-coding-standards.php --docs-path=docs/development
+cmp -s docs/development/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md was not copied to the configured path"
+./vendor/bin/sync-coding-standards.php --docs_path=handbook/
+cmp -s handbook/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md was not copied to the underscore option path"
+for invalid in ../outside /tmp/outside docs/../outside ""; do
+  if ./vendor/bin/sync-coding-standards.php "--docs-path=$invalid" > "$CONSUMER/docs-path-failure.log" 2>&1; then
+    fail "Sync should reject the documentation path '$invalid'"
+  fi
+  grep -Fq 'Invalid --docs-path value' "$CONSUMER/docs-path-failure.log" || fail "Invalid documentation path was not reported"
+done
+test ! -e ../outside/CODE_QUALITY.md || fail "CODE_QUALITY.md was written outside the project"
 
 info "Asserting backup failure prevents overwrite…"
 rm phpmd.yml

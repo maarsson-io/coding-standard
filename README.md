@@ -21,6 +21,7 @@ The rulesets and the CI workflow target Laravel applications.
 - **It syncs the rulesets.** A sync script copies the shared configuration files into the project after `composer install` and `composer update`.
 - **It activates local checks.** The synced Git hooks run the checks through [GrumPHP](https://github.com/phpro/grumphp) on every commit and push.
 - **It activates CI checks.** The synced GitHub Actions workflow repeats the checks on the server, because local hooks can be bypassed and CI cannot.
+- **It documents the workflow.** A synced [code quality guide](resources/docs/CODE_QUALITY.md) tells the project's developers what runs when, what to do when a check fails, and which conventions apply.
 
 ### Included checks
 
@@ -86,7 +87,7 @@ npm install --save-dev stylelint@^17 @stylistic/stylelint-plugin@^5 postcss-html
 
 The GrumPHP Composer plugin is disabled because the sync script installs and activates the hooks itself. The project must provide PHPUnit and a `phpunit.xml`.
 
-The synced CI workflow calls `npm run eslint` and `npm run stylelint`. With a manual installation, add these scripts to `package.json` yourself; see [Running the checks manually](#running-the-checks-manually) for the commands.
+The synced CI workflow calls `npm run eslint` and `npm run stylelint`. With a manual installation, add these scripts to `package.json` yourself: `eslint` as `eslint .` and `stylelint` as `stylelint "**/*.{css,scss,vue}"`.
 
 <a id="2-project-configuration-required"></a>
 
@@ -113,6 +114,18 @@ Required for both installation methods. Add the sync script to the project's `co
 Composer sets `COMPOSER_DEV_MODE=0` when `install` or `update` runs with `--no-dev`. The condition skips the sync in that mode, because this development dependency and its executable are not installed. This prevents production deployments from failing with `vendor/bin/sync-coding-standards.php: not found`. Development installs still run the sync and propagate any failure.
 
 See [Composer script environment variables](https://getcomposer.org/doc/articles/scripts.md#defining-scripts) for details.
+
+#### Documentation path
+
+The sync copies the code quality guide to `docs/CODE_QUALITY.md`. To place it elsewhere, append the `--docs-path` option to the script, after a `--` separator:
+
+```json
+"coding-standard:sync": [
+  "@php -r \"if (getenv('COMPOSER_DEV_MODE') !== '0') { require 'vendor/bin/sync-coding-standards.php'; }\" -- --docs-path=docs/development"
+]
+```
+
+The guide is then written to `docs/development/CODE_QUALITY.md`. Set the option in the script definition, not on the command line, so that automatic and manual syncs use the same location. The path must be relative to the project root. Changing it later leaves the previous copy in place; delete that file yourself.
 
 ### Run the first sync
 
@@ -158,6 +171,7 @@ The sync runs after `composer install` and `composer update` when development de
 | `eslint.config.mjs` | ESLint configuration |
 | `stylelint.config.mjs` | Stylelint configuration |
 | `.github/workflows/ci.yml` | GitHub Actions workflow |
+| `docs/CODE_QUALITY.md` | Code quality guide for the project's developers; see [Documentation path](#documentation-path) |
 | `.githooks/pre-commit`, `.githooks/commit-msg`, `.githooks/pre-push` | Git hooks |
 
 ### It updates package.json
@@ -203,28 +217,13 @@ In a consumer project with Laravel Boost installed, run `php artisan boost:insta
 
 ---
 
-## Running the checks manually
+## Developer guide
 
-### Hook suites
+The checks, the conventions, the manual commands, and the steps to take when a check fails are described in the [code quality guide](resources/docs/CODE_QUALITY.md). The sync copies it into every project, so the developers of a project read the version that matches their installed rules.
 
-Run every commit or push check without committing or pushing:
+### The debug statement script
 
-```sh
-./vendor/bin/grumphp run --testsuite=git_pre_commit
-./vendor/bin/grumphp run --testsuite=git_pre_push
-```
-
-`grumphp run` skips the debug statement check; see below.
-
-### Debug statements
-
-GrumPHP runs its `git_blacklist` task only in the pre-commit context, on the staged files. To apply the same check to every tracked file, as the CI workflow does, run from the project root:
-
-```sh
-./vendor/bin/check-debug-statements.php
-```
-
-The script reads the `git_blacklist` options from `grumphp.yml` and selects files with GrumPHP's own filters, so it follows the hook's keywords, extensions, and whitelist and ignore patterns.
+GrumPHP runs its `git_blacklist` task only in the pre-commit context, on the staged files. `./vendor/bin/check-debug-statements.php` applies the same check to every tracked file, and the CI workflow uses it. It reads the `git_blacklist` options from `grumphp.yml` and selects files with GrumPHP's own filters, so it follows the hook's keywords, extensions, and whitelist and ignore patterns.
 
 | Situation | Result |
 | --- | --- |
@@ -233,61 +232,7 @@ The script reads the `git_blacklist` options from `grumphp.yml` and selects file
 | No tracked file matches the filters | Passes with a notice |
 | `phpro/grumphp` is not installed, or `grumphp.yml` is missing | Fails, because the check could not run |
 
-### PHPMD
-
-```sh
-./vendor/bin/phpmd analyze . --format=ansi --ruleset=phpmd.yml --suffixes=php --cache --cache-file=.phpmd.cache
-```
-
-### PHPCS
-
-Check:
-
-```sh
-./vendor/bin/phpcs --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .
-```
-
-Fix with PHPCBF, which comes with the same package:
-
-```sh
-./vendor/bin/phpcbf --parallel=4 --standard=.phpcs.xml -d memory_limit=1G --cache=.phpcs.cache .
-```
-
-### PHP CS Fixer
-
-Check:
-
-```sh
-./vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.php --cache-file=.php-cs-fixer.cache
-```
-
-Fix:
-
-```sh
-./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --cache-file=.php-cs-fixer.cache
-```
-
-### PHPStan with Larastan and dead code detection
-
-```sh
-./vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=1G --no-progress
-```
-
-Analyse the complete configured codebase, so that dead code detection sees references across files and tests.
-
-### ESLint
-
-Check:
-
-```sh
-npx eslint .
-```
-
-Fix:
-
-```sh
-npx eslint . --fix
-```
+### ESLint and Vue 2
 
 The shared configuration uses `vue.configs['flat/recommended']`, which targets Vue 3. For a Vue 2 project, replace it in `eslint.config.mjs` with:
 
@@ -296,30 +241,6 @@ vue.configs['flat/vue2-recommended']
 ```
 
 Select the ruleset that matches the installed Vue major version before running `--fix`. Vue 3 rules can apply incompatible fixes to Vue 2 code, such as renaming `beforeDestroy` to `beforeUnmount`; the renamed hook will not run in Vue 2. The sync overwrites `eslint.config.mjs`, so restore this adjustment after each sync.
-
-### Stylelint
-
-Check:
-
-```sh
-npx stylelint "**/*.{css,scss,vue}"
-```
-
-Fix:
-
-```sh
-npx stylelint "**/*.{css,scss,vue}" --fix
-```
-
----
-
-## Check details
-
-Some checks have their own rules in this package:
-
-- **Debug statements and development markers:** `dd()`, `dump()`, `var_dump()`, `print_r()`, `var_export()`, `die()`, `exit()`, the `console` logging functions, `debugger;`, `alert()`, the `FIXME:`, `HACK:`, and `XXX:` markers, and merge conflict markers. A keyword called as a method, such as `Dialog.alert()` or `$this->dump()`, is not reported. Files under `public/vendor` are skipped.
-- **Protected branch names:** direct commits to `develop`, `staging`, `staging/*`, and `master` are rejected.
-- **Commit message format:** `<type>(<optional scope>): <subject>` with one of the types `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, or `revert`. Subject and body lines are limited to 72 characters.
 
 ---
 
