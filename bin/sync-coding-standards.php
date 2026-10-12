@@ -71,28 +71,35 @@ foreach ($filesToSync as $source => $target) {
         continue;
     }
 
-    if (file_exists($targetPath) || is_link($targetPath)) {
-        $backupPath = $targetPath . '.backup';
-        $backupIndex = 1;
-        while (file_exists($backupPath) || is_link($backupPath)) {
-            $backupPath = $targetPath . '.backup.' . $backupIndex++;
+    // An identical regular file needs neither a backup nor a rewrite.
+    $isUnchanged = is_file($targetPath)
+        && ! is_link($targetPath)
+        && hash_file('sha256', $targetPath) === hash_file('sha256', $sourcePath);
+
+    if (! $isUnchanged) {
+        if (file_exists($targetPath) || is_link($targetPath)) {
+            $backupPath = $targetPath . '.backup';
+            $backupIndex = 1;
+            while (file_exists($backupPath) || is_link($backupPath)) {
+                $backupPath = $targetPath . '.backup.' . $backupIndex++;
+            }
+
+            if (! @copy($targetPath, $backupPath)) {
+                fwrite(STDERR, '[FAIL] Failed to back up ' . $target . '; file was not overwritten.' . PHP_EOL);
+                $errorsCount++;
+
+                continue;
+            }
+
+            fwrite(STDOUT, '[INFO] Backup created: ' . substr($backupPath, strlen($projectRoot) + 1) . PHP_EOL);
         }
 
-        if (! @copy($targetPath, $backupPath)) {
-            fwrite(STDERR, '[FAIL] Failed to back up ' . $target . '; file was not overwritten.' . PHP_EOL);
+        if (! @copy($sourcePath, $targetPath)) {
+            fwrite(STDERR, '[' . CLI_COLORS['red'] . 'FAIL' . CLI_COLORS['reset'] . '] Failed to copy ' . $target . ' to project root.' . PHP_EOL);
             $errorsCount++;
 
             continue;
         }
-
-        fwrite(STDOUT, '[INFO] Backup created: ' . substr($backupPath, strlen($projectRoot) + 1) . PHP_EOL);
-    }
-
-    if (! @copy($sourcePath, $targetPath)) {
-        fwrite(STDERR, '[' . CLI_COLORS['red'] . 'FAIL' . CLI_COLORS['reset'] . '] Failed to copy ' . $target . ' to project root.' . PHP_EOL);
-        $errorsCount++;
-
-        continue;
     }
 
     if (str_starts_with($target, '.githooks/') && ! @chmod($targetPath, 0755)) {

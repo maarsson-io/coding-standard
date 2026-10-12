@@ -6,6 +6,16 @@ This project uses the shared rules of [maarsson/coding-standard](https://github.
 
 This file is managed by that package and is overwritten on every sync. Do not edit it here.
 
+## Setup
+
+Install the Composer and npm dependencies, then activate the Git hooks once after cloning:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+Until the hooks are activated, the local checks do not run.
+
 ## What runs when
 
 | Check | Tool | Commit | Push | CI |
