@@ -9,14 +9,14 @@ Centralized custom coding standards that can be applied across my different proj
 
 ## About
 
-This package holds centrally maintained, opinionated code quality rulesets and applies them to individual projects automatically. The rules are maintained in one place, and every project receives the same version of them whenever its Composer dependencies are installed or updated.
+This package holds centrally maintained, opinionated code quality rulesets and applies them to individual projects automatically. The rules are maintained in one place, and every project receives the same version of them whenever the package is updated.
 
 The rulesets and the CI workflow target Laravel applications.
 
 ### How it works
 
 - **It installs the tools.** The package requires every PHP tool its rulesets need, and adds the frontend tools to the project's `package.json`.
-- **It syncs the rulesets.** A sync script copies the shared configuration files into the project after `composer install` and `composer update`.
+- **It syncs the rulesets.** A sync script copies the shared configuration files into the project whenever Composer updates the package.
 - **It activates local checks.** The synced Git hooks run the checks through [GrumPHP](https://github.com/phpro/grumphp) on every commit and push.
 - **It activates CI checks.** The synced GitHub Actions workflow repeats the checks on the server, because local hooks can be bypassed and CI cannot.
 - **It documents the workflow.** A synced [code quality guide](resources/docs/CODE_QUALITY.md) tells the project's developers what runs when, what to do when a check fails, and which conventions apply.
@@ -68,16 +68,13 @@ The project must provide PHPUnit and a `phpunit.xml`.
 
 ### Configure the Composer scripts
 
-Add the sync script to the project's `composer.json` and run it after every install and update:
+Add the sync script to the project's `composer.json` and run it after every update:
 
 ```json
 {
   "scripts": {
     "coding-standard:sync": [
       "@php -r \"if (getenv('COMPOSER_DEV_MODE') !== '0') { require 'vendor/bin/sync-coding-standards.php'; }\""
-    ],
-    "post-install-cmd": [
-      "@coding-standard:sync"
     ],
     "post-update-cmd": [
       "@coding-standard:sync"
@@ -86,7 +83,7 @@ Add the sync script to the project's `composer.json` and run it after every inst
 }
 ```
 
-Composer sets `COMPOSER_DEV_MODE=0` when `install` or `update` runs with `--no-dev`. The condition skips the sync in that mode, because this development dependency and its executable are not installed. This prevents production deployments from failing with `vendor/bin/sync-coding-standards.php: not found`. Development installs still run the sync and propagate any failure.
+Composer sets `COMPOSER_DEV_MODE=0` when a command runs with `--no-dev`. The condition skips the sync in that mode, because this development dependency and its executable are not installed. This prevents a production `composer update --no-dev` from failing with `vendor/bin/sync-coding-standards.php: not found`. Development updates still run the sync and propagate any failure.
 
 See [Composer script environment variables](https://getcomposer.org/doc/articles/scripts.md#defining-scripts) for details.
 
@@ -106,12 +103,13 @@ The guide is then written to `docs/development/CODE_QUALITY.md`. Set the option 
 
 ```sh
 composer coding-standard:sync
+git config core.hooksPath .githooks
 ```
 
 Then:
 
 1. Run `npm install` to install the frontend tools the sync added to `package.json`.
-2. Add `*.cache` and `*.backup*` to `.gitignore`.
+2. Add `*.cache` to `.gitignore`.
 3. Commit the synced files together with `package.json` and `package-lock.json`. The CI workflow checks the committed files and does not sync.
 
 ### Updating
@@ -131,13 +129,13 @@ composer remove --dev maarsson/dev-tools --no-update
 composer require --dev maarsson/coding-standard:^3.0 --with-all-dependencies
 ```
 
-The plugin permissions and the Composer scripts stay as they are. The frontend tools in `package.json` keep their versions; the first sync only reorders its own record under the `maarsson-coding-standard` key.
+The plugin permissions, the Composer scripts, and the frontend tools in `package.json` stay as they are.
 
 ---
 
 ## What the sync command does
 
-The sync runs after `composer install` and `composer update` when development dependencies are installed and Composer scripts are enabled. Run it manually at any time with `composer coding-standard:sync`, or directly with `./vendor/bin/sync-coding-standards.php` from the project root.
+The sync runs after `composer update`, `composer require`, and `composer remove` when development dependencies are installed and Composer scripts are enabled. Run it manually at any time with `composer coding-standard:sync`, or directly with `./vendor/bin/sync-coding-standards.php` from the project root.
 
 ### It copies the shared files
 
@@ -174,7 +172,8 @@ When run from the root of a Git repository, the sync makes the hooks executable 
 
 The sync always overwrites the copied files. This is intentional: it guarantees that every project uses the same rules.
 
-- Before a file is replaced, its current contents are saved next to it as `<filename>.backup`, then `<filename>.backup.1`, `<filename>.backup.2`, and so on. A backup is created on every sync, even when the file did not change.
+- A file that already matches the shared version is left untouched.
+- Before a differing file is replaced, its current contents are saved next to it as `<filename>.backup`, then `<filename>.backup.1`, `<filename>.backup.2`, and so on. A backup therefore always marks a file the sync changed. Review it, then delete it; backups are not meant to be committed.
 - If a backup cannot be created, that file is not overwritten and the sync exits with an error.
 
 Project-specific adjustments are not supported by the package. When a project needs one, such as an extra CI job or the Vue 2 ESLint ruleset, keep it in version control: after a sync, review the `git diff`, commit what the package changed, and restore the project-specific parts.

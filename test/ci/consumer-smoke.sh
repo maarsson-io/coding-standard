@@ -106,8 +106,14 @@ git config core.hooksPath .old-hooks
 ./vendor/bin/sync-coding-standards.php
 test "$(git config --local core.hooksPath)" = .githooks || fail "Git hooks were not activated"
 for file in $MANAGED_FILES; do
-  cmp -s "$file" "$file.backup" || fail "$file backup does not match the existing file"
+  test ! -e "$file.backup" || fail "$file was backed up although it did not change"
 done
+
+info "Asserting hook permissions are restored without a backup…"
+chmod -x .githooks/pre-commit
+./vendor/bin/sync-coding-standards.php
+test -x .githooks/pre-commit || fail "pre-commit permissions were not restored"
+test ! -e .githooks/pre-commit.backup || fail "pre-commit was backed up although its content did not change"
 
 info "Asserting the debug statement check runs with the installed GrumPHP…"
 test -x vendor/bin/check-debug-statements.php || fail "check-debug-statements.php was not installed as executable"
@@ -143,8 +149,7 @@ for file in $MANAGED_FILES; do
 done
 ./vendor/bin/sync-coding-standards.php
 for file in $MANAGED_FILES; do
-  cmp -s "$file.backup.1" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file local changes were not backed up"
-  cmp -s "$file.backup" "$file" || fail "$file previous backup was overwritten"
+  cmp -s "$file.backup" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file local changes were not backed up"
 done
 cmp -s phpmd.yml ./vendor/maarsson/coding-standard/resources/phpmd.yml.dist || fail "phpmd.yml overwrite error"
 
@@ -166,13 +171,25 @@ cmp -s stylelint.config.mjs ./vendor/maarsson/coding-standard/resources/stylelin
 cmp -s .github/workflows/ci.yml ./vendor/maarsson/coding-standard/resources/ci.yml.dist || fail "CI workflow overwrite error"
 cmp -s docs/CODE_QUALITY.md ./vendor/maarsson/coding-standard/resources/docs/CODE_QUALITY.md || fail "CODE_QUALITY.md overwrite error"
 
-info "Asserting repeated sync preserves earlier backups…"
+info "Asserting an unchanged sync creates no backup…"
 ./vendor/bin/sync-coding-standards.php
 for file in $MANAGED_FILES; do
-  cmp -s "$file.backup.2" "$file" || fail "$file numbered backup was not created"
-  cmp -s "$file.backup.1" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file local backup was overwritten"
+  test ! -e "$file.backup.1" || fail "$file was backed up although it did not change"
 done
-rm -rf "$CONSUMER/expected-backups"
+
+info "Asserting a later change gets a numbered backup…"
+mkdir "$CONSUMER/expected-second-backups"
+for file in $MANAGED_FILES; do
+  echo "# second local change" >> "$file"
+  cp "$file" "$CONSUMER/expected-second-backups/$(basename "$file")"
+done
+./vendor/bin/sync-coding-standards.php
+for file in $MANAGED_FILES; do
+  cmp -s "$file.backup.1" "$CONSUMER/expected-second-backups/$(basename "$file")" || fail "$file numbered backup was not created"
+  cmp -s "$file.backup" "$CONSUMER/expected-backups/$(basename "$file")" || fail "$file first backup was overwritten"
+done
+cmp -s grumphp.yml ./vendor/maarsson/coding-standard/resources/grumphp.yml.dist || fail "grumphp.yml second overwrite error"
+rm -rf "$CONSUMER/expected-backups" "$CONSUMER/expected-second-backups"
 
 info "Asserting the documentation path option…"
 ./vendor/bin/sync-coding-standards.php --docs-path=docs/development
