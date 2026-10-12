@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: chore(deps)
+
+  - package-ecosystem: composer
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    # Only refresh composer.lock; the constraints in composer.json are what consumers resolve against.
+    versioning-strategy: lockfile-only
+    groups:
+      composer:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: chore(deps)
