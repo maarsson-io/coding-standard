@@ -112,6 +112,8 @@ Then:
 2. Add `*.cache` to `.gitignore`.
 3. Commit the synced files together with `package.json` and `package-lock.json`. The CI workflow checks the committed files and does not sync.
 
+It is recommended to enable Dependabot alerts in your project's own repository: this package does not check its tools for vulnerabilities, because the versions that actually install are recorded in the project's lockfiles and can differ between projects.
+
 ### Updating
 
 ```sh
