@@ -131,7 +131,7 @@ composer remove --dev maarsson/dev-tools --no-update
 composer require --dev maarsson/coding-standard:^3.0 --with-all-dependencies
 ```
 
-The plugin permissions and the Composer scripts stay as they are. The frontend tools in `package.json` keep their versions; the first sync only reorders its own record under the `maarsson-coding-standard` key.
+The plugin permissions, the Composer scripts, and the frontend tools in `package.json` stay as they are.
 
 ---
 
