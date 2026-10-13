@@ -184,7 +184,7 @@ Project-specific adjustments are not supported by the package. When a project ne
 
 The synced workflow assumes a Laravel application tested with `php artisan test` on an in-memory SQLite database.
 
-- It reports the checks `CI Tests`, `CI Test PHP 8.4`, and `CI Test PHP 8.5`. Use these names for required status checks.
+- It reports the checks `Code Quality`, `Tests (PHP 8.4)`, and `Tests (PHP 8.5)`. Use these names for required status checks.
 - It installs Composer dependencies without scripts, so it verifies the committed rulesets and never syncs.
 - Its actions are pinned to commit SHAs. A repository that restricts allowed actions must permit them.
 
