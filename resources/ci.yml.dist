@@ -21,8 +21,8 @@ env:
   TELESCOPE_ENABLED: false
 
 jobs:
-  tests:
-    name: CI Tests
+  code-quality:
+    name: Code Quality
     runs-on: ubuntu-24.04
     timeout-minutes: 6
 
@@ -54,29 +54,29 @@ jobs:
       - name: Validate Composer autoloading
         run: vendor/bin/grumphp run --tasks=composer_validate_autoload
 
-      - name: JSON Lint
+      - name: Lint JSON
         run: vendor/bin/grumphp run --tasks=jsonlint
 
-      - name: XML Lint
+      - name: Lint XML
         run: vendor/bin/grumphp run --tasks=xmllint
 
-      - name: YAML Lint
+      - name: Lint YAML
         run: vendor/bin/grumphp run --tasks=yamllint
 
-      - name: Debug Statement Check
+      - name: Check debug statements
         # GrumPHP runs git_blacklist only in the pre-commit context, so the script applies the task's configuration.
         run: vendor/bin/check-debug-statements.php
 
-      - name: PHP CodeSniffer
+      - name: Run PHP CodeSniffer
         run: vendor/bin/phpcs --parallel=4 .
 
-      - name: PHP CS Fixer
+      - name: Run PHP CS Fixer
         run: vendor/bin/php-cs-fixer check --diff
 
-      - name: PHP Mess Detector
+      - name: Run PHP Mess Detector
         run: vendor/bin/phpmd analyze . --format ansi --ruleset phpmd.yml
 
-      - name: PHPStan
+      - name: Run PHPStan
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=-1
 
       - name: Set up Node.js
@@ -89,14 +89,14 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: ESLint
+      - name: Run ESLint
         run: npm run eslint
 
-      - name: Stylelint
+      - name: Run Stylelint
         run: npm run stylelint
 
-  php-matrix:
-    name: CI Test PHP ${{ matrix.php }}
+  tests:
+    name: Tests (PHP ${{ matrix.php }})
     strategy:
       fail-fast: false
       matrix:
@@ -129,10 +129,10 @@ jobs:
       - name: Bootstrap Composer autoloading and Laravel packages
         run: composer run-script post-autoload-dump --no-interaction
 
-      - name: PHP Lint
+      - name: Lint PHP
         run: vendor/bin/grumphp run --tasks=phplint
 
-      - name: Laravel tests
+      - name: Run Laravel tests
         env:
           SHELL_VERBOSITY: 1
         run: >
