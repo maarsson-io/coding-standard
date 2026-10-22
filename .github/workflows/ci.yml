@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  update: true
+
 jobs:
   phpmd:
     runs-on: ubuntu-latest
