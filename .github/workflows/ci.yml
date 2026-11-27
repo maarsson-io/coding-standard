@@ -1,8 +1,20 @@
 name: Validate
 
 on:
-  push:
   pull_request:
+    branches:
+      - develop
+      - master
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   update: true
@@ -252,3 +264,29 @@ jobs:
         working-directory: /tmp/coding-standard-consumer-smoke
         run: |
           /tmp/coding-standard-consumer-smoke/repo/test/ci/consumer-smoke.sh
+
+  # Single required status check for the branch rulesets.
+  tests:
+    name: Tests
+    if: always()
+    needs:
+      - phpmd
+      - phpcs
+      - phpcsfixer
+      - larastan
+      - dead-code
+      - grumphp
+      - consumer-smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify job results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: ${RESULTS}"
+          for result in ${RESULTS}; do
+            if [ "${result}" != "success" ]; then
+              exit 1
+            fi
+          done
